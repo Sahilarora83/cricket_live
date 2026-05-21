@@ -1,0 +1,19 @@
+{
+  "name": "cricket-live-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Live cricket scraper, realtime API, and React dashboard.",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "start": "npm run start --workspace backend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
