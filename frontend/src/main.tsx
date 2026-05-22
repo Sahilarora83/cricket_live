@@ -8,6 +8,42 @@ import "./styles.css";
 
 const socket = io(socketUrl, { transports: ["websocket", "polling"] });
 
+const IPL_TEAM_LOGOS: Record<string, string> = {
+  csk: "/assets/cricbuzz/team-logo-860038.png",
+  "chennai super kings": "/assets/cricbuzz/team-logo-860038.png",
+  dc: "/assets/cricbuzz/team-logo-860040.png",
+  "delhi capitals": "/assets/cricbuzz/team-logo-860040.png",
+  gt: "/assets/cricbuzz/team-logo-860068.png",
+  "gujarat titans": "/assets/cricbuzz/team-logo-860068.png",
+  kkr: "/assets/cricbuzz/team-logo-860046.png",
+  "kolkata knight riders": "/assets/cricbuzz/team-logo-860046.png",
+  lsg: "/assets/cricbuzz/team-logo-882545.png",
+  "lucknow super giants": "/assets/cricbuzz/team-logo-882545.png",
+  mi: "/assets/cricbuzz/team-logo-860053.png",
+  "mumbai indians": "/assets/cricbuzz/team-logo-860053.png",
+  pbks: "/assets/cricbuzz/team-logo-860084.png",
+  "punjab kings": "/assets/cricbuzz/team-logo-860084.png",
+  rcb: "/assets/cricbuzz/team-logo-860056.png",
+  "royal challengers bengaluru": "/assets/cricbuzz/team-logo-860056.png",
+  rr: "/assets/cricbuzz/team-logo-860055.png",
+  "rajasthan royals": "/assets/cricbuzz/team-logo-860055.png",
+  srh: "/assets/cricbuzz/team-logo-860066.png",
+  "sunrisers hyderabad": "/assets/cricbuzz/team-logo-860066.png"
+};
+
+const IPL_TEAM_SHORT_NAMES: Record<string, string> = {
+  "chennai super kings": "CSK",
+  "delhi capitals": "DC",
+  "gujarat titans": "GT",
+  "kolkata knight riders": "KKR",
+  "lucknow super giants": "LSG",
+  "mumbai indians": "MI",
+  "punjab kings": "PBKS",
+  "royal challengers bengaluru": "RCB",
+  "rajasthan royals": "RR",
+  "sunrisers hyderabad": "SRH"
+};
+
 function App() {
   const [matches, setMatches] = React.useState<CricketMatch[]>([]);
   const [activeMatch, setActiveMatch] = React.useState<CricketMatch | null>(null);
@@ -200,6 +236,8 @@ function RailSection(props: {
 function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; score: LiveScore | null; pulseKey: number }) {
   const isUpcoming = match?.status === "UPCOMING" && !score?.score;
   const hasPlayers = Boolean(score?.batters?.length || score?.bowler);
+  const team1Logo = match ? teamLogo(match.team1) : null;
+  const team2Logo = match ? teamLogo(match.team2) : null;
 
   return (
     <section className="score-panel" data-pulse={pulseKey}>
@@ -215,6 +253,13 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
         <PreMatchPanel match={match} />
       ) : (
         <>
+          {match ? (
+            <div className="team-score-strip">
+              <TeamBadge name={match.team1} logo={team1Logo} />
+              <span>vs</span>
+              <TeamBadge name={match.team2} logo={team2Logo} align="right" />
+            </div>
+          ) : null}
           <div className="scoreline">
             <div>
               <p className="batting-team">{score?.battingTeam ?? match?.team1 ?? "Team"}</p>
@@ -252,6 +297,15 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
         </div>
       ) : null}
     </section>
+  );
+}
+
+function TeamBadge({ name, logo, align }: { name: string; logo: string | null; align?: "right" }) {
+  return (
+    <div className={align === "right" ? "team-badge right" : "team-badge"}>
+      {logo ? <img src={assetUrl(logo)} alt="" /> : <span className="team-logo-fallback">{shortTeamName(name)}</span>}
+      <strong>{shortTeamName(name)}</strong>
+    </div>
   );
 }
 
@@ -372,6 +426,22 @@ function SeriesPanel({ data, onRefresh }: { data: IplSeriesData | null; onRefres
 
 function assetUrl(path: string) {
   return path.startsWith("http") ? path : `${API_URL}${path}`;
+}
+
+function teamLogo(name: string) {
+  return IPL_TEAM_LOGOS[name.toLowerCase()] ?? IPL_TEAM_LOGOS[shortTeamName(name).toLowerCase()] ?? null;
+}
+
+function shortTeamName(name: string) {
+  const normalized = name.toLowerCase();
+  if (IPL_TEAM_SHORT_NAMES[normalized]) return IPL_TEAM_SHORT_NAMES[normalized];
+
+  const known = Object.entries(IPL_TEAM_LOGOS).find(([key]) => key === name.toLowerCase());
+  if (known && known[0].length <= 4) return known[0].toUpperCase();
+
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length <= 2) return name;
+  return words.map((word) => word[0]).join("").toUpperCase();
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
