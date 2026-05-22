@@ -11,6 +11,8 @@ const schema = z.object({
   CRICKET_PROVIDER: z.enum(["cricbuzz", "mock"]).default("cricbuzz"),
   CRICBUZZ_LIVE_URL: z.string().url().default("https://www.cricbuzz.com/cricket-match/live-scores"),
   CRICBUZZ_BASE_URL: z.string().url().default("https://www.cricbuzz.com"),
+  CRICBUZZ_REQUEST_TIMEOUT_MS: z.coerce.number().default(15000),
+  CRICBUZZ_REQUEST_RETRIES: z.coerce.number().default(2),
   REDIS_URL: z.string().optional(),
   MONGODB_URI: z.string().optional(),
   MATCH_SCHEDULER_INTERVAL_MS: z.coerce.number().default(60000),

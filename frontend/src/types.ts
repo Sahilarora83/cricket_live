@@ -87,3 +87,20 @@ export interface SeriesTeam {
   imageId?: number;
   logoUrl?: string;
 }
+
+export interface SystemStatus {
+  ok: boolean;
+  startedAt: string;
+  uptimeSeconds: number;
+  jobs: Record<
+    "matchScheduler" | "scoreUpdater",
+    {
+      ok: boolean;
+      lastSuccessAt?: string;
+      lastFailureAt?: string;
+      lastError?: string;
+      runs: number;
+      failures: number;
+    }
+  >;
+}

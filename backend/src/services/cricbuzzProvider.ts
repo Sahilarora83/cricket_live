@@ -1,7 +1,7 @@
-import axios from "axios";
 import * as cheerio from "cheerio";
 import { env } from "../config/env.js";
 import type { CommentaryItem, CricketMatch, LiveScore, MatchStatus } from "../types/cricket.js";
+import { fetchCricbuzzHtml } from "../utils/httpClient.js";
 import { cleanText, stableId } from "../utils/text.js";
 import type { CricketProvider } from "./provider.js";
 
@@ -24,12 +24,7 @@ function absoluteUrl(path?: string) {
 
 export class CricbuzzProvider implements CricketProvider {
   async fetchMatches(): Promise<CricketMatch[]> {
-    const { data } = await axios.get(env.CRICBUZZ_LIVE_URL, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 cricket-live-system/1.0"
-      },
-      timeout: 10000
-    });
+    const data = await fetchCricbuzzHtml(env.CRICBUZZ_LIVE_URL);
 
     const $ = cheerio.load(data);
     const matches = new Map<string, CricketMatch>();
@@ -119,12 +114,7 @@ export class CricbuzzProvider implements CricketProvider {
       return scoreFromMatchText(match);
     }
 
-    const { data } = await axios.get(match.detailUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 cricket-live-system/1.0"
-      },
-      timeout: 10000
-    });
+    const data = await fetchCricbuzzHtml(match.detailUrl);
 
     const $ = cheerio.load(data);
     const pageText = cleanText($("body").text());
@@ -136,9 +126,9 @@ export class CricbuzzProvider implements CricketProvider {
     const startStatus = inferStartStatus(pageText) ?? inferStartStatus(match.rawText ?? "");
     const statusText =
       sourceStatusText ||
-      startStatus ||
-      match.rawText ||
+      (parsed ? match.rawText : startStatus) ||
       (parsed ? inferStatusLine(pageText) : undefined) ||
+      match.rawText ||
       "Live score unavailable";
 
     return {
@@ -163,10 +153,7 @@ export class CricbuzzProvider implements CricketProvider {
     const commentaryUrl = match.detailUrl.replace("/live-cricket-scores/", "/cricket-full-commentary/");
 
     try {
-      const { data } = await axios.get(commentaryUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 cricket-live-system/1.0" },
-        timeout: 10000
-      });
+      const data = await fetchCricbuzzHtml(commentaryUrl);
       const $ = cheerio.load(data);
       const items: CommentaryItem[] = [];
 
@@ -191,12 +178,7 @@ export class CricbuzzProvider implements CricketProvider {
   }
 
   private async fetchMatchFromUrl(url: string): Promise<CricketMatch> {
-    const { data } = await axios.get(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 cricket-live-system/1.0"
-      },
-      timeout: 10000
-    });
+    const data = await fetchCricbuzzHtml(url);
 
     const $ = cheerio.load(data);
     const title = cleanText($("title").text());

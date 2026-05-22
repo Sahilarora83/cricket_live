@@ -466,6 +466,17 @@ h1 {
   align-items: center;
   display: flex;
   gap: 8px;
+  min-width: 0;
+}
+
+.insight-strip div:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-warning {
+  color: #b45309;
 }
 
 .series-panel {

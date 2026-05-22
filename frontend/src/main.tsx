@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Bell, CalendarClock, Radio, RefreshCcw, Trophy, Wifi } from "lucide-react";
 import { io } from "socket.io-client";
 import { API_URL, api, socketUrl } from "./api";
-import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore } from "./types";
+import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore, SystemStatus } from "./types";
 import "./styles.css";
 
 const socket = io(socketUrl, { transports: ["websocket", "polling"] });
@@ -53,6 +53,7 @@ function App() {
   const [lastUpdate, setLastUpdate] = React.useState<string>("Waiting for feed");
   const [scorePulse, setScorePulse] = React.useState(0);
   const [seriesData, setSeriesData] = React.useState<IplSeriesData | null>(null);
+  const [systemStatus, setSystemStatus] = React.useState<SystemStatus | null>(null);
   const activeMatchId = React.useRef<string | null>(null);
 
   const showScore = React.useCallback((nextScore: LiveScore | null) => {
@@ -84,6 +85,27 @@ function App() {
 
   React.useEffect(() => {
     void api.iplSeries().then(setSeriesData).catch(() => setSeriesData(null));
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    async function loadStatus() {
+      try {
+        const nextStatus = await api.systemStatus();
+        if (mounted) setSystemStatus(nextStatus);
+      } catch {
+        if (mounted) setSystemStatus(null);
+      }
+    }
+
+    void loadStatus();
+    const timer = window.setInterval(() => void loadStatus(), 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -189,7 +211,7 @@ function App() {
 
         <section className="score-stage">
           <ScorePanel match={activeMatch} score={score} pulseKey={scorePulse} />
-          <InsightStrip score={score} match={activeMatch} />
+          <InsightStrip score={score} match={activeMatch} systemStatus={systemStatus} />
         </section>
       </section>
 
@@ -328,8 +350,18 @@ function PreMatchPanel({ match }: { match: CricketMatch }) {
   );
 }
 
-function InsightStrip({ score, match }: { score: LiveScore | null; match: CricketMatch | null }) {
+function InsightStrip({
+  score,
+  match,
+  systemStatus
+}: {
+  score: LiveScore | null;
+  match: CricketMatch | null;
+  systemStatus: SystemStatus | null;
+}) {
   const alertText = match?.status === "UPCOMING" ? "Will switch when Cricbuzz goes live" : "Auto feed enabled";
+  const scoreJob = systemStatus?.jobs.scoreUpdater;
+  const feedText = scoreJob?.ok ? "Feed healthy" : scoreJob?.lastError ? `Feed retrying: ${scoreJob.lastError}` : "Provider feed";
 
   return (
     <section className="insight-strip">
@@ -337,7 +369,7 @@ function InsightStrip({ score, match }: { score: LiveScore | null; match: Cricke
         <Bell size={18} />
         <span>{alertText}</span>
       </div>
-      <div>{match?.series ?? "Provider feed"} </div>
+      <div className={scoreJob?.ok === false ? "feed-warning" : ""}>{feedText}</div>
       <div>{score?.updatedAt ? new Date(score.updatedAt).toLocaleString() : "No score yet"}</div>
     </section>
   );

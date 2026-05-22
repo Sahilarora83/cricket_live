@@ -1,4 +1,4 @@
-import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore } from "./types";
+import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore, SystemStatus } from "./types";
 
 export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
@@ -27,7 +27,8 @@ export const api = {
   score: (matchId: string) => get<LiveScore | null>(`/api/score/${matchId}`),
   commentary: (matchId: string) => get<CommentaryItem[]>(`/api/commentary/${matchId}`),
   iplSeries: () => get<IplSeriesData>("/api/series/ipl-2026"),
-  refreshIplSeries: () => post<IplSeriesData>("/api/series/ipl-2026/refresh", {})
+  refreshIplSeries: () => post<IplSeriesData>("/api/series/ipl-2026/refresh", {}),
+  systemStatus: () => get<SystemStatus>("/api/system-status")
 };
 
 export const socketUrl = import.meta.env.VITE_SOCKET_URL ?? API_URL;

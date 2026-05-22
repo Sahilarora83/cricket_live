@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { MatchController } from "../controllers/matchController.js";
 import type { SeriesController } from "../controllers/seriesController.js";
+import { getSystemStatus } from "../services/systemStatus.js";
 
 export function createRoutes(controller: MatchController, seriesController: SeriesController) {
   const router = Router();
@@ -13,6 +14,7 @@ export function createRoutes(controller: MatchController, seriesController: Seri
   router.get("/commentary/:matchId", controller.getCommentary);
   router.get("/series/ipl-2026", seriesController.getIplSeries);
   router.post("/series/ipl-2026/refresh", seriesController.refreshIplSeries);
+  router.get("/system-status", (_request, response) => response.json({ data: getSystemStatus() }));
 
   return router;
 }

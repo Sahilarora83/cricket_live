@@ -12,6 +12,7 @@ import { createRoutes } from "./routes/index.js";
 import type { MatchService } from "./services/matchService.js";
 import type { ScoreService } from "./services/scoreService.js";
 import type { SeriesService } from "./services/seriesService.js";
+import { getSystemStatus } from "./services/systemStatus.js";
 
 export function createApp(matchService: MatchService, scoreService: ScoreService, seriesService: SeriesService) {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp(matchService: MatchService, scoreService: ScoreService
       ok: true,
       service: "cricket-live-system",
       mongodb: getDatabaseStatus(),
+      system: getSystemStatus(),
       timestamp: new Date().toISOString()
     });
   });

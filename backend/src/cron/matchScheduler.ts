@@ -2,6 +2,7 @@ import { env } from "../config/env.js";
 import type { LiveSocket } from "../sockets/liveSocket.js";
 import type { MatchService } from "../services/matchService.js";
 import type { NotificationService } from "../services/notificationService.js";
+import { recordJobFailure, recordJobSuccess } from "../services/systemStatus.js";
 
 export class MatchScheduler {
   private timer?: NodeJS.Timeout;
@@ -34,7 +35,9 @@ export class MatchScheduler {
         this.liveSocket.emitMatchChanged(result.active);
         await this.notificationService.sendMatchChanged(result.active);
       }
+      recordJobSuccess("matchScheduler");
     } catch (error) {
+      recordJobFailure("matchScheduler", error);
       console.error("Match scheduler failed", error);
     } finally {
       this.running = false;
