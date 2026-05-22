@@ -260,20 +260,51 @@ function RailSection(props: {
         {props.matches.length === 0 ? (
           <p className="muted small">No matches</p>
         ) : (
-          props.matches.map((match) => (
-            <button
-              className={match.id === props.activeId ? "match-card active" : "match-card"}
-              key={match.id}
-              onClick={() => props.onPick(match)}
-            >
-              <span className={`dot ${match.status.toLowerCase()}`} />
-              <strong>{match.team1} vs {match.team2}</strong>
-              <small>{match.matchType ?? "Cricket"} {match.venue ? `- ${match.venue}` : ""}</small>
-            </button>
-          ))
+          props.matches.map((match) => <MatchCard key={match.id} match={match} active={match.id === props.activeId} onPick={props.onPick} />)
         )}
       </div>
     </section>
+  );
+}
+
+function MatchCard({
+  match,
+  active,
+  onPick
+}: {
+  match: CricketMatch;
+  active: boolean;
+  onPick: (match: CricketMatch) => void;
+}) {
+  const team1Logo = teamLogo(match.team1);
+  const team2Logo = teamLogo(match.team2);
+  const scoreText = match.embeddedScore?.score ?? statusSummary(match);
+
+  return (
+    <button className={active ? "match-card active" : "match-card"} onClick={() => onPick(match)}>
+      <div className="match-card-top">
+        <span className={`dot ${match.status.toLowerCase()}`} />
+        <span>{match.status}</span>
+      </div>
+      <div className="match-card-teams">
+        <MiniTeam name={match.team1} logo={team1Logo} />
+        <div className="match-card-score">
+          <strong>{scoreText}</strong>
+          <small>{match.matchType ?? "IPL"}</small>
+        </div>
+        <MiniTeam name={match.team2} logo={team2Logo} />
+      </div>
+      <small className="match-card-venue">{match.venue ?? match.rawText ?? ""}</small>
+    </button>
+  );
+}
+
+function MiniTeam({ name, logo }: { name: string; logo: string | null }) {
+  return (
+    <div className="mini-team">
+      {logo ? <img src={assetUrl(logo)} alt="" /> : <span>{shortTeamName(name)}</span>}
+      <b>{shortTeamName(name)}</b>
+    </div>
   );
 }
 
@@ -293,17 +324,17 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
         <span>{match?.matchType ?? "All formats"}</span>
         <span>{score?.source ?? "source"}</span>
       </div>
+      {match ? (
+        <div className="team-score-strip">
+          <TeamBadge name={match.team1} logo={team1Logo} />
+          <span>vs</span>
+          <TeamBadge name={match.team2} logo={team2Logo} align="right" />
+        </div>
+      ) : null}
       {isUpcoming ? (
         <PreMatchPanel match={match} />
       ) : (
         <>
-          {match ? (
-            <div className="team-score-strip">
-              <TeamBadge name={match.team1} logo={team1Logo} />
-              <span>vs</span>
-              <TeamBadge name={match.team2} logo={team2Logo} align="right" />
-            </div>
-          ) : null}
           <div className="scoreline">
             <div>
               <p className="batting-team">{score?.battingTeam ?? match?.team1 ?? "Team"}</p>
@@ -480,6 +511,12 @@ function SeriesPanel({ data, onRefresh }: { data: IplSeriesData | null; onRefres
 
 function assetUrl(path: string) {
   return path.startsWith("http") ? path : `${API_URL}${path}`;
+}
+
+function statusSummary(match: CricketMatch) {
+  if (match.status === "UPCOMING") return "Yet to start";
+  if (match.status === "COMPLETED") return "Final";
+  return "Live";
 }
 
 function teamLogo(name: string) {

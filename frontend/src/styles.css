@@ -155,8 +155,7 @@ h1 {
   cursor: pointer;
   display: grid;
   gap: 5px;
-  grid-template-columns: 10px 1fr;
-  min-height: 62px;
+  min-height: 112px;
   padding: 12px;
   text-align: left;
   transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
@@ -167,19 +166,6 @@ h1 {
   background: #eef8f1;
   border-color: #36a269;
   transform: translateY(-1px);
-}
-
-.match-card strong,
-.match-card small {
-  grid-column: 2;
-}
-
-.match-card strong {
-  font-weight: 600;
-}
-
-.match-card small {
-  color: #67736f;
 }
 
 .dot {
@@ -203,6 +189,93 @@ h1 {
 
 .dot.unknown {
   background: #8f9a94;
+}
+
+.match-card-top {
+  align-items: center;
+  color: #68756f;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 7px;
+  text-transform: uppercase;
+}
+
+.match-card-teams {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 54px minmax(0, 1fr) 54px;
+}
+
+.mini-team {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  min-width: 0;
+}
+
+.mini-team img,
+.mini-team span {
+  background: #ffffff;
+  border: 1px solid #e2e7df;
+  border-radius: 7px;
+  height: 34px;
+  object-fit: contain;
+  padding: 4px;
+  width: 34px;
+}
+
+.mini-team span {
+  align-items: center;
+  color: #6b4b2e;
+  display: inline-flex;
+  font-size: 0.66rem;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.mini-team b {
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-card-score {
+  align-items: center;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.match-card-score strong {
+  color: #10231b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-card-score small,
+.match-card-venue {
+  color: #67736f;
+}
+
+.match-card-venue {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .score-stage {
