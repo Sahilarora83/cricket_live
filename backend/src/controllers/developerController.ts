@@ -99,7 +99,7 @@ export class DeveloperController {
 
           currentKey = payload.data.key;
           apiKeyBox.value = currentKey;
-          exampleBox.value = '<div id="cricket-live-widget"></div>\\n<script src="' + location.origin + '/api/developer/widget.js" data-api-key="' + currentKey + '" data-target="cricket-live-widget" data-refresh="30000"></script>';
+          exampleBox.value = '<div id="cricket-live-widget"></div>\\n<script src="' + location.origin + '/api/developer/widget.js" data-api-key="' + currentKey + '" data-target="cricket-live-widget" data-refresh="30000"><\\/script>';
           result.classList.add("visible");
         } catch (error) {
           testStatus.className = "status bad";
