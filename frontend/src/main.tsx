@@ -43,6 +43,24 @@ const IPL_TEAM_SHORT_NAMES: Record<string, string> = {
   "rajasthan royals": "RR",
   "sunrisers hyderabad": "SRH"
 };
+const IPL_TEAM_NAMES = Object.keys(IPL_TEAM_SHORT_NAMES);
+
+function isIplMatch(match: CricketMatch) {
+  const text = [
+    match.team1,
+    match.team2,
+    match.series,
+    match.matchType,
+    match.venue,
+    match.rawText,
+    match.detailUrl
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return text.includes("ipl") || text.includes("indian premier league") || IPL_TEAM_NAMES.some((team) => text.includes(team));
+}
 
 function App() {
   const [matches, setMatches] = React.useState<CricketMatch[]>([]);
@@ -73,8 +91,10 @@ function App() {
     async function boot() {
       const [matchList, live] = await Promise.all([api.matches(), api.liveMatch()]);
       if (!mounted) return;
-      setMatches(matchList);
-      setActiveMatch(live ?? matchList[0] ?? null);
+      const iplMatches = matchList.filter(isIplMatch);
+      const iplLive = live && isIplMatch(live) ? live : null;
+      setMatches(iplMatches);
+      setActiveMatch(iplLive ?? iplMatches[0] ?? null);
     }
 
     void boot();
@@ -134,9 +154,10 @@ function App() {
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
     socket.on("matches_update", (payload: CricketMatch[]) => {
-      setMatches(payload);
+      const iplMatches = payload.filter(isIplMatch);
+      setMatches(iplMatches);
       void api.liveMatch().then((match) => {
-        if (match && match.id !== activeMatchId.current) {
+        if (match && isIplMatch(match) && match.id !== activeMatchId.current) {
           setActiveMatch(match);
           showScore(null);
           setCommentary([]);
@@ -144,6 +165,7 @@ function App() {
       });
     });
     socket.on("match_changed", (payload: CricketMatch) => {
+      if (!isIplMatch(payload)) return;
       setActiveMatch(payload);
       showScore(null);
       setCommentary([]);

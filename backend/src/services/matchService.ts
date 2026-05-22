@@ -8,12 +8,24 @@ import type { CricketProvider } from "./provider.js";
 const MATCHES_KEY = "matches:all";
 const ACTIVE_MATCH_KEY = "match:active";
 const MANUAL_ACTIVE_KEY = "match:active:manual";
+const IPL_TEAM_NAMES = [
+  "chennai super kings",
+  "delhi capitals",
+  "gujarat titans",
+  "kolkata knight riders",
+  "lucknow super giants",
+  "mumbai indians",
+  "punjab kings",
+  "royal challengers bengaluru",
+  "rajasthan royals",
+  "sunrisers hyderabad"
+];
 
 export class MatchService {
   constructor(private readonly provider: CricketProvider) {}
 
   async refreshMatches() {
-    const matches = await this.provider.fetchMatches();
+    const matches = (await this.provider.fetchMatches()).filter(isIplMatch);
     await cache.set(MATCHES_KEY, matches, 120);
 
     if (canPersist()) {
@@ -118,6 +130,23 @@ function selectActiveMatch(matches: CricketMatch[]) {
     matches[0] ??
     null
   );
+}
+
+function isIplMatch(match: CricketMatch) {
+  const text = [
+    match.team1,
+    match.team2,
+    match.series,
+    match.matchType,
+    match.venue,
+    match.rawText,
+    match.detailUrl
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return text.includes("ipl") || text.includes("indian premier league") || IPL_TEAM_NAMES.some((team) => text.includes(team));
 }
 
 function mergeUpdatedMatch(manualActive: CricketMatch, matches: CricketMatch[]) {
