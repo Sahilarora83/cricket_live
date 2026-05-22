@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Bell, CalendarClock, Radio, RefreshCcw, Trophy, Wifi } from "lucide-react";
 import { io } from "socket.io-client";
 import { API_URL, api, socketUrl } from "./api";
-import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore, SystemStatus } from "./types";
+import type { CommentaryItem, CricketMatch, IplSeriesData, LiveScore, SeriesMatchScore, SystemStatus } from "./types";
 import "./styles.css";
 
 const socket = io(socketUrl, { transports: ["websocket", "polling"] });
@@ -187,7 +187,7 @@ function App() {
 
   const liveMatches = matches.filter((match) => match.status === "LIVE");
   const upcomingMatches = matches.filter((match) => match.status === "UPCOMING");
-  const completedMatches = matches.filter((match) => match.status === "COMPLETED");
+  const completedMatches = mergeMatchLists(matches.filter((match) => match.status === "COMPLETED"), seriesCompletedMatches(seriesData));
 
   async function selectMatch(match: CricketMatch) {
     setActiveMatch(match);
@@ -584,6 +584,79 @@ function statusSummary(match: CricketMatch) {
   if (match.status === "UPCOMING") return "Yet to start";
   if (match.status === "COMPLETED") return "Final";
   return "Live";
+}
+
+function seriesCompletedMatches(seriesData: IplSeriesData | null): CricketMatch[] {
+  return (seriesData?.matches ?? [])
+    .filter((match) => match.state === "Complete")
+    .map((match) => {
+      const score = seriesScoreToText(match.score, match.team1.shortName, match.team2.shortName);
+      const latest = latestSeriesInnings(match.score);
+      const overNumber = Number(latest?.overs);
+
+      return {
+        id: `cricbuzz_${match.matchId}`,
+        providerId: String(match.matchId),
+        team1: match.team1.teamName,
+        team2: match.team2.teamName,
+        status: "COMPLETED",
+        matchType: match.format,
+        series: "Indian Premier League 2026",
+        startTime: match.startTime,
+        venue: match.venue,
+        rawText: match.status,
+        detailUrl: `${API_URL}/api/score/cricbuzz_${match.matchId}`,
+        embeddedScore: score
+          ? {
+              matchId: `cricbuzz_${match.matchId}`,
+              battingTeam: latest?.team,
+              score,
+              runs: latest?.runs,
+              wickets: latest?.wickets,
+              overs: latest?.overs ? String(latest.overs) : undefined,
+              runRate: latest && Number.isFinite(overNumber) && overNumber > 0 ? (latest.runs / overNumber).toFixed(2) : undefined,
+              statusText: match.status,
+              batters: [],
+              updatedAt: match.startTime,
+              source: "cricbuzz"
+            }
+          : undefined
+      } satisfies CricketMatch;
+    })
+    .sort((a, b) => Number(new Date(b.startTime ?? 0)) - Number(new Date(a.startTime ?? 0)));
+}
+
+function mergeMatchLists(primary: CricketMatch[], secondary: CricketMatch[]) {
+  const merged = new Map<string, CricketMatch>();
+  for (const match of secondary) merged.set(match.id, match);
+  for (const match of primary) merged.set(match.id, { ...merged.get(match.id), ...match });
+  return Array.from(merged.values()).sort((a, b) => Number(new Date(b.startTime ?? 0)) - Number(new Date(a.startTime ?? 0)));
+}
+
+function seriesScoreToText(score: SeriesMatchScore | undefined, team1ShortName: string, team2ShortName: string) {
+  const rows = [
+    ...seriesTeamScoreRows(score?.team1Score, team1ShortName),
+    ...seriesTeamScoreRows(score?.team2Score, team2ShortName)
+  ];
+  return rows.length ? rows.map((row) => `${row.team} ${row.runs}/${row.wickets} (${row.overs})`).join(", ") : undefined;
+}
+
+function seriesTeamScoreRows(score: SeriesMatchScore["team1Score"] | undefined, team: string) {
+  return Object.values(score ?? {})
+    .filter((innings) => typeof innings.runs === "number")
+    .map((innings) => ({
+      team,
+      runs: innings.runs ?? 0,
+      wickets: innings.wickets ?? 0,
+      overs: innings.overs ?? ""
+    }));
+}
+
+function latestSeriesInnings(score: SeriesMatchScore | undefined) {
+  return [
+    ...seriesTeamScoreRows(score?.team1Score, ""),
+    ...seriesTeamScoreRows(score?.team2Score, "")
+  ].at(-1);
 }
 
 type ParsedTeamScore = {

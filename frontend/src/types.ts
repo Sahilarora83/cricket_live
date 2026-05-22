@@ -56,6 +56,7 @@ export interface IplSeriesData {
     team1: SeriesTeam;
     team2: SeriesTeam;
     venue?: string;
+    score?: SeriesMatchScore;
   }>;
   pointsTable: Array<{
     teamId: number;
@@ -87,6 +88,10 @@ export interface SeriesTeam {
   imageId?: number;
   logoUrl?: string;
 }
+
+export type SeriesMatchScore = Partial<
+  Record<"team1Score" | "team2Score", Record<string, { runs?: number; wickets?: number; overs?: number | string }>>
+>;
 
 export interface SystemStatus {
   ok: boolean;
