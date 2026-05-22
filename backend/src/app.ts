@@ -24,7 +24,7 @@ export function createApp(matchService: MatchService, scoreService: ScoreService
       crossOriginResourcePolicy: { policy: "cross-origin" }
     })
   );
-  app.use(cors({ origin: env.CORS_ORIGIN }));
+  app.use(cors({ origin: true }));
   app.use(express.json());
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
   app.use("/assets", express.static(path.resolve(process.cwd(), "public", "assets")));

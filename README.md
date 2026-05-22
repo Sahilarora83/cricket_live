@@ -232,6 +232,27 @@ x-api-quota-used
 x-api-quota-remaining
 ```
 
+## Website Widget
+
+Developers can embed the live IPL score widget on any website.
+
+```html
+<div id="cricket-live-widget"></div>
+<script
+  src="https://cricket-live-0we0.onrender.com/api/developer/widget.js"
+  data-api-key="cricket_live_your_key_here"
+  data-target="cricket-live-widget"
+  data-refresh="30000"
+></script>
+```
+
+The widget:
+
+- Fetches the active IPL match automatically
+- Updates on the configured interval
+- Shows team logos, scores, and result/status text
+- Uses the same monthly quota as the developer API key
+
 ## Socket.IO Events
 
 Client emits:
