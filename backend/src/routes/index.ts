@@ -24,6 +24,7 @@ export function createRoutes(
   router.get("/series/ipl-2026", seriesController.getIplSeries);
   router.post("/series/ipl-2026/refresh", seriesController.refreshIplSeries);
   router.get("/system-status", (_request, response) => response.json({ data: getSystemStatus() }));
+  router.get("/developer/api-keys", developerController.getApiKeyPortal);
   router.post("/developer/api-keys", developerController.createApiKey);
 
   router.get("/v1/matches", apiKeyAuth, controller.getMatches);
