@@ -1,6 +1,6 @@
 # Cricket Live
 
-Automatic cricket match detection, live score scraping, MongoDB storage, and a realtime React dashboard.
+Automatic IPL match detection, live score scraping, MongoDB storage, public API keys, and a realtime React dashboard.
 
 Frontend: https://cricket-live-frontend.vercel.app/
 
@@ -8,19 +8,20 @@ Backend API: https://cricket-live-0we0.onrender.com
 
 ## Overview
 
-Cricket Live is a full-stack live cricket scoring system built for IPL, T20, ODI, Test, and other cricket matches. The backend automatically tracks Cricbuzz live matches, switches to active matches, polls score updates, stores data in MongoDB, and broadcasts realtime updates through Socket.IO. The frontend shows a clean live score command dashboard with auto-refreshing scores, match lists, IPL table data, team logos, and series assets.
+Cricket Live is a full-stack live IPL scoring system. The backend automatically tracks Cricbuzz IPL matches, switches to active matches, polls score updates, stores data in MongoDB, and broadcasts realtime updates through Socket.IO. The frontend shows a clean live score command dashboard with auto-refreshing scores, match lists, IPL table data, team logos, and series assets.
 
 ## Core Features
 
-- Automatic live, upcoming, and recent match detection
+- Automatic IPL live, upcoming, and recent match detection
 - Live score polling and active match switching
 - Realtime Socket.IO score updates
-- MongoDB Atlas persistence for matches, scores, commentary, and series data
+- MongoDB Atlas persistence for matches, scores, commentary, API keys, and series data
 - Redis support with memory-cache fallback
-- Cricbuzz provider adapter for scraping live scores and IPL series pages
+- Cricbuzz provider adapter for scraping IPL live scores and IPL series pages
 - IPL 2026 points table, matches, squads, team logos, and local asset downloads
+- Public developer API key generation
+- Monthly API quota tracking for generated keys
 - React + Vite frontend dashboard
-- Responsive scorecard layout with team logos
 - Production-ready backend deployment on Render, AWS EC2, or any Node host
 - Frontend deployment on Vercel
 
@@ -45,7 +46,7 @@ Redis / Memory Cache
 Express REST API + Socket.IO
    |
    v
-React Frontend / Future Mobile App
+React Frontend / Developer API Users
 ```
 
 ## Tech Stack
@@ -78,27 +79,27 @@ Deployment:
 
 ```text
 .
-├── backend
-│   ├── src
-│   │   ├── config
-│   │   ├── controllers
-│   │   ├── cron
-│   │   ├── middleware
-│   │   ├── models
-│   │   ├── providers
-│   │   ├── routes
-│   │   ├── services
-│   │   ├── sockets
-│   │   ├── utils
-│   │   ├── app.ts
-│   │   └── server.ts
-│   └── public
-│       └── assets
-├── frontend
-│   └── src
-├── docker-compose.yml
-├── package.json
-└── README.md
+|-- backend
+|   |-- src
+|   |   |-- config
+|   |   |-- controllers
+|   |   |-- cron
+|   |   |-- middleware
+|   |   |-- models
+|   |   |-- routes
+|   |   |-- services
+|   |   |-- sockets
+|   |   |-- utils
+|   |   |-- app.ts
+|   |   `-- server.ts
+|   `-- public
+|       `-- assets
+|-- frontend
+|   `-- src
+|-- docker-compose.yml
+|-- package.json
+|-- LICENSE
+`-- README.md
 ```
 
 ## Environment Variables
@@ -113,10 +114,13 @@ CORS_ORIGIN=https://cricket-live-frontend.vercel.app
 CRICKET_PROVIDER=cricbuzz
 CRICBUZZ_LIVE_URL=https://www.cricbuzz.com/cricket-match/live-scores
 CRICBUZZ_BASE_URL=https://www.cricbuzz.com
+CRICBUZZ_REQUEST_TIMEOUT_MS=15000
+CRICBUZZ_REQUEST_RETRIES=2
 MATCH_SCHEDULER_INTERVAL_MS=60000
 SCORE_UPDATER_INTERVAL_MS=5000
 SERIES_SCRAPER_INTERVAL_MS=600000
 COMMENTARY_LIMIT=30
+API_FREE_MONTHLY_QUOTA=10000
 ```
 
 Optional backend variables:
@@ -160,19 +164,7 @@ Build everything:
 npm run build
 ```
 
-Run backend only:
-
-```bash
-npm run dev --workspace backend
-```
-
-Run frontend only:
-
-```bash
-npm run dev --workspace frontend
-```
-
-## API Endpoints
+## Public Dashboard API
 
 ```text
 GET /health
@@ -182,12 +174,62 @@ GET /api/score/:matchId
 GET /api/score-history/:matchId?limit=60
 GET /api/commentary/:matchId
 GET /api/series/ipl-2026
+GET /api/system-status
 ```
 
 Example:
 
 ```bash
 curl https://cricket-live-0we0.onrender.com/api/live-match
+```
+
+## Developer API Keys
+
+Users can generate an API key and use the IPL feed in their own projects.
+
+Generate an API key:
+
+```bash
+curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-keys \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Demo App\",\"email\":\"developer@example.com\"}"
+```
+
+The full key is shown only once. Store it safely.
+
+Use the key:
+
+```bash
+curl https://cricket-live-0we0.onrender.com/api/v1/live-match \
+  -H "x-api-key: cricket_live_your_key_here"
+```
+
+Protected developer endpoints:
+
+```text
+GET /api/v1/matches
+GET /api/v1/live-match
+GET /api/v1/score/:matchId
+GET /api/v1/score-history/:matchId?limit=60
+GET /api/v1/commentary/:matchId
+GET /api/v1/series/ipl-2026
+```
+
+Each generated key starts on the open-source plan:
+
+```text
+Plan: open-source
+Monthly quota: 10,000 requests
+Auth header: x-api-key
+```
+
+Quota headers are included on protected responses:
+
+```text
+x-api-plan
+x-api-quota-limit
+x-api-quota-used
+x-api-quota-remaining
 ```
 
 ## Socket.IO Events
@@ -213,12 +255,13 @@ system_notice
 
 ```text
 1. Scheduler fetches Cricbuzz live score page.
-2. Matches are classified as live, upcoming, or completed.
-3. Active live match is selected automatically.
+2. IPL matches are classified as live, upcoming, or completed.
+3. Active live IPL match is selected automatically.
 4. Score updater polls the active match every few seconds.
 5. Score is saved to cache and MongoDB.
 6. Socket.IO broadcasts updates to connected clients.
 7. React dashboard updates without manual refresh.
+8. Developer API users access protected /api/v1 endpoints with an API key.
 ```
 
 ## MongoDB Atlas Setup
@@ -281,31 +324,6 @@ VITE_SOCKET_URL=https://your-backend-url
 
 Redeploy the Vercel project after changing environment variables.
 
-## AWS EC2 Backend Deployment
-
-The backend can also run on Ubuntu EC2 using PM2 and Nginx.
-
-High-level steps:
-
-```text
-1. Launch Ubuntu EC2.
-2. Install Node.js 20, Git, Nginx, and PM2.
-3. Clone this repository.
-4. Create backend .env.
-5. Run npm ci.
-6. Build backend.
-7. Start backend with PM2.
-8. Proxy port 80/443 to backend port 4000 with Nginx.
-9. Add the EC2 public IP to MongoDB Atlas Network Access.
-```
-
-Example PM2 command:
-
-```bash
-pm2 start backend/dist/server.js --name cricket-live-backend --update-env
-pm2 save
-```
-
 ## Notes
 
 - Render free services may sleep after inactivity, so first request can be slow.
@@ -313,7 +331,8 @@ pm2 save
 - For a serious production product, use a licensed cricket data API.
 - Do not commit `.env` files or database passwords.
 - Rotate any exposed database password before production use.
+- The open-source API key system is free-tier only. Billing plans can be added later with Stripe or Razorpay.
 
 ## License
 
-Private project.
+MIT License.

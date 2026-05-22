@@ -5,11 +5,13 @@ import morgan from "morgan";
 import path from "node:path";
 import { getDatabaseStatus } from "./config/database.js";
 import { env } from "./config/env.js";
+import { DeveloperController } from "./controllers/developerController.js";
 import { MatchController } from "./controllers/matchController.js";
 import { SeriesController } from "./controllers/seriesController.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createRoutes } from "./routes/index.js";
 import type { MatchService } from "./services/matchService.js";
+import { ApiKeyService } from "./services/apiKeyService.js";
 import type { ScoreService } from "./services/scoreService.js";
 import type { SeriesService } from "./services/seriesService.js";
 import { getSystemStatus } from "./services/systemStatus.js";
@@ -39,7 +41,9 @@ export function createApp(matchService: MatchService, scoreService: ScoreService
 
   const controller = new MatchController(matchService, scoreService);
   const seriesController = new SeriesController(seriesService);
-  app.use("/api", createRoutes(controller, seriesController));
+  const apiKeyService = new ApiKeyService();
+  const developerController = new DeveloperController(apiKeyService);
+  app.use("/api", createRoutes(controller, seriesController, developerController, apiKeyService));
   app.use(errorHandler);
 
   return app;

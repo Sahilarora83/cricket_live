@@ -19,6 +19,7 @@ const schema = z.object({
   SCORE_UPDATER_INTERVAL_MS: z.coerce.number().default(5000),
   SERIES_SCRAPER_INTERVAL_MS: z.coerce.number().default(600000),
   COMMENTARY_LIMIT: z.coerce.number().default(30),
+  API_FREE_MONTHLY_QUOTA: z.coerce.number().default(10000),
   FIREBASE_PROJECT_ID: z.string().optional(),
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional()
