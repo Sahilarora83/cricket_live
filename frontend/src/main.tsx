@@ -279,6 +279,7 @@ function MatchCard({
   const team1Logo = teamLogo(match.team1);
   const team2Logo = teamLogo(match.team2);
   const scoreText = match.embeddedScore?.score ?? statusSummary(match);
+  const cardDetail = match.status === "COMPLETED" ? displayResultText(match.embeddedScore ?? null, match) : match.matchType ?? "IPL";
 
   return (
     <button className={active ? "match-card active" : "match-card"} onClick={() => onPick(match)}>
@@ -290,7 +291,7 @@ function MatchCard({
         <MiniTeam name={match.team1} logo={team1Logo} />
         <div className="match-card-score">
           <strong>{scoreText}</strong>
-          <small>{match.matchType ?? "IPL"}</small>
+          <small>{cardDetail}</small>
         </div>
         <MiniTeam name={match.team2} logo={team2Logo} />
       </div>
@@ -313,6 +314,8 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
   const hasPlayers = Boolean(score?.batters?.length || score?.bowler);
   const team1Logo = match ? teamLogo(match.team1) : null;
   const team2Logo = match ? teamLogo(match.team2) : null;
+  const teamScores = match ? splitTeamScores(score?.score, match) : {};
+  const resultText = displayResultText(score, match);
 
   return (
     <section className="score-panel" data-pulse={pulseKey}>
@@ -334,25 +337,21 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
       {isUpcoming ? (
         <PreMatchPanel match={match} />
       ) : (
-        <>
-          <div className="scoreline">
-            <div>
-              <p className="batting-team">{score?.battingTeam ?? match?.team1 ?? "Team"}</p>
-              <h2 key={pulseKey}>{score?.score ?? "--"}</h2>
-            </div>
-            <div className="rate-box">
-              <span>RR</span>
-              <strong>{score?.runRate ?? "--"}</strong>
-            </div>
-          </div>
-          <p className="status-text">{score?.statusText ?? match?.rawText ?? "Waiting for the next score update."}</p>
-        </>
+        <MatchScoreboard
+          key={pulseKey}
+          match={match}
+          resultText={resultText}
+          team1Logo={team1Logo}
+          team1Score={teamScores.team1}
+          team2Logo={team2Logo}
+          team2Score={teamScores.team2}
+        />
       )}
       {!isUpcoming ? (
         <div className="mini-grid">
           <Metric label="Overs" value={score?.overs ?? "--"} />
           <Metric label="Run rate" value={score?.runRate ?? "--"} />
-          <Metric label="Result" value={match?.status === "COMPLETED" ? "Final" : "Live"} />
+          <Metric label="Result" value={match?.status === "COMPLETED" ? resultText : "Live"} />
         </div>
       ) : null}
       {hasPlayers ? (
@@ -372,6 +371,74 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
         </div>
       ) : null}
     </section>
+  );
+}
+
+function MatchScoreboard({
+  match,
+  resultText,
+  team1Logo,
+  team1Score,
+  team2Logo,
+  team2Score
+}: {
+  match: CricketMatch | null;
+  resultText: string;
+  team1Logo: string | null;
+  team1Score?: ParsedTeamScore;
+  team2Logo: string | null;
+  team2Score?: ParsedTeamScore;
+}) {
+  if (!match) {
+    return (
+      <div className="match-scoreboard">
+        <TeamScoreCell name="Team" logo={null} score="--" />
+        <div className="score-result">
+          <strong>{resultText}</strong>
+        </div>
+        <TeamScoreCell name="Team" logo={null} score="--" align="right" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="match-scoreboard">
+      <TeamScoreCell name={match.team1} logo={team1Logo} score={team1Score?.score ?? "--"} overs={team1Score?.overs} />
+      <div className="score-result">
+        <strong>{resultText}</strong>
+        <span>{match.matchType ?? "IPL"}</span>
+      </div>
+      <TeamScoreCell
+        name={match.team2}
+        logo={team2Logo}
+        score={team2Score?.score ?? (team1Score ? "Yet to bat" : "--")}
+        overs={team2Score?.overs}
+        align="right"
+      />
+    </div>
+  );
+}
+
+function TeamScoreCell({
+  name,
+  logo,
+  score,
+  overs,
+  align
+}: {
+  name: string;
+  logo: string | null;
+  score: string;
+  overs?: string;
+  align?: "right";
+}) {
+  return (
+    <div className={align === "right" ? "team-score-cell right" : "team-score-cell"}>
+      {logo ? <img src={assetUrl(logo)} alt="" /> : <span className="team-logo-fallback">{shortTeamName(name)}</span>}
+      <strong>{shortTeamName(name)}</strong>
+      <b>{score}</b>
+      {overs ? <small>({overs})</small> : null}
+    </div>
   );
 }
 
@@ -517,6 +584,36 @@ function statusSummary(match: CricketMatch) {
   if (match.status === "UPCOMING") return "Yet to start";
   if (match.status === "COMPLETED") return "Final";
   return "Live";
+}
+
+type ParsedTeamScore = {
+  score: string;
+  overs?: string;
+};
+
+function splitTeamScores(scoreText: string | undefined, match: CricketMatch) {
+  if (!scoreText) return {};
+
+  const rows = Array.from(scoreText.matchAll(/([A-Z]{2,6})\s+(\d{1,3}\s*[-/]\s*\d{1,2})\s*\(([\d.]+)\)/g)).map((item) => ({
+    team: item[1],
+    score: item[2].replace(/\s+/g, ""),
+    overs: item[3]
+  }));
+
+  const team1 = rows.find((row) => row.team === shortTeamName(match.team1));
+  const team2 = rows.find((row) => row.team === shortTeamName(match.team2));
+
+  return {
+    team1: team1 ? { score: team1.score, overs: team1.overs } : rows[0] ? { score: rows[0].score, overs: rows[0].overs } : undefined,
+    team2: team2 ? { score: team2.score, overs: team2.overs } : rows.length > 1 ? { score: rows[1].score, overs: rows[1].overs } : undefined
+  };
+}
+
+function displayResultText(score: LiveScore | null, match: CricketMatch | null) {
+  const text = score?.statusText ?? match?.rawText ?? "Waiting for the next score update.";
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  const result = cleaned.match(/([A-Z][A-Za-z\s]+ won by [^.,|]+|[A-Z][A-Za-z\s]+ need [^.,|]+|Match tied|No result)/i)?.[0];
+  return result ?? cleaned;
 }
 
 function teamLogo(name: string) {

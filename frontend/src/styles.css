@@ -383,11 +383,74 @@ h1 {
   }
 }
 
-.scoreline {
-  align-items: end;
-  display: flex;
+.match-scoreboard {
+  align-items: center;
+  animation: scoreTick 360ms ease;
+  display: grid;
   gap: 18px;
-  justify-content: space-between;
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.1fr) minmax(160px, 1fr);
+  margin: 8px 0 18px;
+}
+
+.team-score-cell {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  justify-items: start;
+  min-width: 0;
+}
+
+.team-score-cell.right {
+  justify-items: end;
+  text-align: right;
+}
+
+.team-score-cell img,
+.team-score-cell .team-logo-fallback {
+  background: #f7f8f4;
+  border: 1px solid #e2e7df;
+  border-radius: 8px;
+  height: 48px;
+  object-fit: contain;
+  padding: 5px;
+  width: 48px;
+}
+
+.team-score-cell strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.team-score-cell b {
+  color: #10231b;
+  font-size: clamp(1.25rem, 2vw, 1.85rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.team-score-cell small,
+.score-result span {
+  color: #7b8782;
+}
+
+.score-result {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.score-result strong {
+  color: #17231f;
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.score-result span {
+  font-size: 0.92rem;
 }
 
 .batting-team {
@@ -396,21 +459,11 @@ h1 {
   margin-bottom: 8px;
 }
 
-.scoreline h2 {
-  animation: scoreTick 520ms ease;
-  color: #10231b;
-  font-size: clamp(1.9rem, 3.4vw, 3.2rem);
-  font-weight: 500;
-  line-height: 1.08;
-}
-
 @keyframes scoreTick {
   0% {
-    color: #0b8f5a;
     transform: translateY(-2px);
   }
   100% {
-    color: #10231b;
     transform: translateY(0);
   }
 }
@@ -708,6 +761,7 @@ h1 {
 
   .grid,
   .team-score-strip,
+  .match-scoreboard,
   .mini-grid,
   .players,
   .insight-strip,
