@@ -25,7 +25,7 @@ export class DeveloperController {
       body { margin: 0; min-height: 100vh; background: #0b0d10; color: #f3f5f7; font-weight: 400; }
       body:before { content: ""; position: fixed; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(22, 163, 103, .10), transparent 34%), radial-gradient(circle at 95% 0%, rgba(47, 128, 237, .10), transparent 28%); }
       .shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; position: relative; }
-      .sidebar { background: rgba(15, 17, 21, .94); border-right: 1px solid #24272e; padding: 22px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; }
+      .sidebar { background: rgba(15, 17, 21, .94); border-right: 1px solid #24272e; padding: 22px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
       .brand-row { align-items: center; display: flex; gap: 12px; padding: 0 10px; }
       .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 12px; display: flex; font-weight: 650; height: 38px; justify-content: center; width: 38px; }
       .brand-title { font-size: 16px; font-weight: 560; }
@@ -47,6 +47,9 @@ export class DeveloperController {
       .search input { background: transparent; border: 0; box-shadow: none; color: #f9fafb; min-height: 0; padding: 0; }
       .search input:focus { border: 0; box-shadow: none; }
       .icon-btn { align-items: center; background: rgba(17,24,39,.8); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; color: #d1d5db; display: inline-flex; height: 42px; justify-content: center; min-height: 42px; padding: 0; width: 42px; }
+      .icon-btn { font-size: 0; }
+      #themeToggle:before { content: "T"; font-size: 13px; }
+      .icon-btn[title="Notifications"]:before { content: "N"; font-size: 13px; }
       .status-badge { align-items: center; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); border-radius: 999px; color: #bbf7d0; display: inline-flex; font-size: 13px; gap: 8px; padding: 9px 12px; white-space: nowrap; }
       .pulse { background: #22c55e; border-radius: 99px; box-shadow: 0 0 0 rgba(34,197,94,.5); height: 8px; width: 8px; animation: livePulse 1.8s infinite; }
       @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
@@ -59,6 +62,7 @@ export class DeveloperController {
       .page { display: none; animation: fadeIn .2s ease; }
       .page.active-page { display: block; }
       .page.hero.active-page { display: grid; }
+      .page.hero.active-page > .card.panel { grid-column: 1 / -1; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(380px, .78fr); gap: 22px; align-items: start; }
       .intro, .card { background: rgba(31, 33, 38, .92); border: 1px solid #30343b; border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .18); }
@@ -337,7 +341,6 @@ export class DeveloperController {
             <textarea id="example" readonly></textarea>
           </section>
             </div>
-          </section>
 
           <div class="card panel">
             <div class="card-head">
