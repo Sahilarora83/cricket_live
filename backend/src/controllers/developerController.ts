@@ -237,7 +237,7 @@ export class DeveloperController {
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
       import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
-      import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+      import { getAuth, GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDqmvvnLzaRTdlRRXlqxbWkCa1cludK4_s",
@@ -338,8 +338,11 @@ export class DeveloperController {
           const message = String(error?.code || error?.message || "");
           if (message.includes("auth/unauthorized-domain")) {
             setStatus("Firebase Authorized domains mein " + location.hostname + " add karo, phir Google sign-in chalega.", "bad");
+          } else if (message.includes("auth/popup-closed-by-user") || message.includes("auth/cancelled-popup-request")) {
+            setStatus("Popup close ho gaya. Redirect sign-in try kar rahe hain...");
+            await signInWithRedirect(auth, provider);
           } else {
-            setStatus(error.message || "Google sign-in failed", "bad");
+            setStatus((error.message || "Google sign-in failed") + " Firebase mein Google provider, authorized domain, aur API key restriction check karo.", "bad");
           }
         } finally {
           googleSignInBtn.disabled = false;
@@ -348,6 +351,15 @@ export class DeveloperController {
 
       signOutBtn.addEventListener("click", async () => {
         await signOut(auth);
+      });
+
+      getRedirectResult(auth).catch((error) => {
+        const message = String(error?.code || error?.message || "");
+        if (message.includes("auth/unauthorized-domain")) {
+          setStatus("Firebase Authorized domains mein " + location.hostname + " add karo.", "bad");
+        } else {
+          setStatus((error.message || "Google redirect sign-in failed") + " Firebase Auth settings check karo.", "bad");
+        }
       });
 
       async function postJson(path, body) {
