@@ -202,33 +202,9 @@ curl https://cricket-live-0we0.onrender.com/api/live-match
 
 ## Developer API Keys
 
-Users can generate an API key and use the IPL feed in their own projects.
+Users can sign in with Google at `/api/developer/api-keys`, generate an API key, and use the IPL feed in their own projects. The full key is shown only once, so store it safely.
 
-Generate an API key:
-
-```bash
-curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-key-otp \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"developer@example.com\",\"purpose\":\"create\"}"
-
-curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-keys \
-  -H "Content-Type: application/json" \
-  -d "{\"name\":\"Demo App\",\"email\":\"developer@example.com\",\"otp\":\"123456\",\"allowedOrigins\":[\"https://example.com\"]}"
-```
-
-The full key is shown only once. Store it safely. Key generation and revoke actions require an email OTP. Production keys should be registered to the website origin where the widget is embedded.
-
-Revoke leaked keys:
-
-```bash
-curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-key-otp \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"developer@example.com\",\"purpose\":\"revoke\"}"
-
-curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-keys/revoke \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"developer@example.com\",\"otp\":\"123456\"}"
-```
+The developer portal uses Firebase Google sign-in for key generation and revoke actions. No OTP or website-domain input is required.
 
 Use the key:
 

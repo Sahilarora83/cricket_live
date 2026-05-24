@@ -20,10 +20,7 @@ export function createApiKeyAuth(apiKeyService: ApiKeyService) {
       return;
     }
 
-    const result = await apiKeyService.consumeApiKey(apiKey, {
-      origin: request.header("origin") ?? undefined,
-      referer: request.header("referer") ?? undefined
-    });
+    const result = await apiKeyService.consumeApiKey(apiKey);
     if (!result.ok) {
       response.status(result.status).json({ error: result.error });
       return;

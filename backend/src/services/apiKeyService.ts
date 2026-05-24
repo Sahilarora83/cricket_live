@@ -18,21 +18,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function normalizeOrigin(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  try {
-    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
-    return url.origin.toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-function requestOrigin(origin?: string, referer?: string) {
-  return normalizeOrigin(origin || referer || "");
-}
-
 export class ApiKeyService {
   async requestOtp(input: { email: string; purpose: "create" | "revoke" }) {
     if (!canPersist()) {
@@ -70,7 +55,7 @@ export class ApiKeyService {
     };
   }
 
-  async createApiKey(input: { name: string; email: string; otp?: string; allowedOrigins?: string[]; verifiedByGoogle?: boolean }) {
+  async createApiKey(input: { name: string; email: string; otp?: string; verifiedByGoogle?: boolean }) {
     if (!canPersist()) {
       throw new ApiKeyServiceError("MongoDB is required to generate API keys", 503);
     }
@@ -93,19 +78,12 @@ export class ApiKeyService {
     }
 
     const { key, keyPrefix } = generateApiKey();
-    const allowedOrigins = Array.from(new Set((input.allowedOrigins ?? []).map(normalizeOrigin).filter(Boolean)));
-    if (env.NODE_ENV === "production" && allowedOrigins.length === 0) {
-      throw new ApiKeyServiceError("At least one production website domain is required.", 400);
-    }
-    if (env.NODE_ENV === "production" && allowedOrigins.some((origin) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin))) {
-      throw new ApiKeyServiceError("Localhost domains are not allowed for production API keys.", 400);
-    }
     const record = await ApiKeyModel.create({
       name,
       email,
       keyPrefix,
       keyHash: hashApiKey(key),
-      allowedOrigins,
+      allowedOrigins: [],
       plan: "open-source",
       monthlyQuota: env.API_FREE_MONTHLY_QUOTA,
       usageMonth: currentUsageMonth(),
@@ -115,7 +93,7 @@ export class ApiKeyService {
     return {
       key,
       keyPrefix: record.keyPrefix,
-      allowedOrigins: record.allowedOrigins,
+      allowedOrigins: [],
       plan: record.plan,
       monthlyQuota: record.monthlyQuota,
       maxActiveKeysPerEmail: env.API_MAX_ACTIVE_KEYS_PER_EMAIL,
@@ -148,7 +126,7 @@ export class ApiKeyService {
     return { revoked: result.modifiedCount };
   }
 
-  async consumeApiKey(rawKey: string, requestHeaders?: { origin?: string; referer?: string }) {
+  async consumeApiKey(rawKey: string) {
     if (!canPersist()) {
       return { ok: false as const, status: 503, error: "API key storage is unavailable" };
     }
@@ -157,12 +135,6 @@ export class ApiKeyService {
     const apiKey = await ApiKeyModel.findOne({ keyHash, revoked: false });
     if (!apiKey) {
       return { ok: false as const, status: 401, error: "Invalid API key" };
-    }
-
-    const allowedOrigins = apiKey.allowedOrigins ?? [];
-    const currentOrigin = requestOrigin(requestHeaders?.origin, requestHeaders?.referer);
-    if (allowedOrigins.length > 0 && (!currentOrigin || !allowedOrigins.includes(currentOrigin))) {
-      return { ok: false as const, status: 403, error: "API key is not allowed on this domain" };
     }
 
     const usageMonth = currentUsageMonth();

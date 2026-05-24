@@ -27,14 +27,7 @@ export function createApp(matchService: MatchService, scoreService: ScoreService
   );
   app.use(
     cors({
-      origin: (origin, callback) => {
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
-        const allowedOrigins = env.CORS_ORIGIN.split(",").map((item) => item.trim()).filter(Boolean);
-        callback(null, allowedOrigins.includes(origin));
-      }
+      origin: true
     })
   );
   app.use(express.json());

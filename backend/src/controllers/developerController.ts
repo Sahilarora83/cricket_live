@@ -98,14 +98,14 @@ export class DeveloperController {
         </div>
         <nav class="nav">
           <a class="nav-item active" href="#"><span class="nav-dot"></span> API keys</a>
-          <a class="nav-item" href="/api/system-status">System status</a>
-          <a class="nav-item" href="/api/v1/matches">Matches API</a>
-          <a class="nav-item" href="/api/developer/widget.js">Widget SDK</a>
+          <a class="nav-item" href="/api/developer/api-keys">Dashboard</a>
+          <a class="nav-item" href="#embed">Embed widget</a>
+          <a class="nav-item" href="#revoke">Revoke key</a>
         </nav>
         <div class="side-card">
           <p class="fine">Free mode active</p>
           <h2 style="margin-top: 4px;">Live scores API</h2>
-          <p class="muted">Google sign-in and domain locked widget keys.</p>
+          <p class="muted">Google sign-in and simple copy-paste widget keys.</p>
         </div>
       </aside>
 
@@ -134,12 +134,12 @@ export class DeveloperController {
               <div>
                 <p class="eyebrow">Cricket Live Command</p>
                 <h1>API keys</h1>
-                <p>Create and manage domain-locked keys for the live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
+                <p>Create and manage keys for the live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
               </div>
               <div class="stats">
                 <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
                 <div class="stat"><strong>Email</strong><span>Google verified</span></div>
-                <div class="stat"><strong>Domain</strong><span>Origin locked</span></div>
+                <div class="stat"><strong>Easy</strong><span>Copy paste</span></div>
               </div>
             </div>
 
@@ -172,10 +172,6 @@ export class DeveloperController {
               Email
               <input name="email" type="email" placeholder="developer@example.com" required />
             </label>
-            <label>
-              Allowed website domain
-              <input name="allowedOrigin" placeholder="https://example.com" required />
-            </label>
             <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
 
@@ -188,13 +184,13 @@ export class DeveloperController {
               <button id="testBtn" type="button">Test key</button>
             </div>
             <p id="testStatus" class="status"></p>
-            <div class="result-title">Embed snippet</div>
+            <div id="embed" class="result-title">Embed snippet</div>
             <textarea id="example" readonly></textarea>
           </section>
             </div>
           </section>
 
-      <section class="panel">
+      <section id="revoke" class="panel">
         <div class="card">
           <div class="card-head">
             <div>
@@ -378,15 +374,14 @@ export class DeveloperController {
           const payload = await postJson("/api/developer/api-keys", {
             name: formData.get("name"),
             email: formData.get("email"),
-            firebaseIdToken,
-            allowedOrigins: [formData.get("allowedOrigin")]
+            firebaseIdToken
           });
 
           currentKey = payload.data.key;
           apiKeyBox.value = currentKey;
           exampleBox.value = '<div id="cricket-live-widget">Loading live cricket scores...</div>\\n<script async src="' + location.origin + '/api/developer/widget.js" data-api-key="' + currentKey + '" data-target="cricket-live-widget" data-refresh="30000"><\\/script>';
           quotaStatus.className = "status ok";
-          quotaStatus.textContent = "Copy it now. Limit: " + payload.data.monthlyQuota + " requests/month for this email. Allowed domain: " + (payload.data.allowedOrigins || []).join(", ") + ".";
+          quotaStatus.textContent = "Copy it now. Limit: " + payload.data.monthlyQuota + " requests/month for this email.";
           result.classList.add("visible");
           setStatus("API key created successfully.", "ok");
         } catch (error) {
@@ -702,10 +697,6 @@ export class DeveloperController {
     const name = typeof request.body?.name === "string" ? request.body.name : "";
     const email = typeof request.body?.email === "string" ? request.body.email : "";
     const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
-    const allowedOrigins = Array.isArray(request.body?.allowedOrigins)
-      ? request.body.allowedOrigins.filter((item: unknown): item is string => typeof item === "string")
-      : [];
-
     if (!name.trim() || !email.trim() || !firebaseIdToken.trim()) {
       response.status(400).json({ error: "Name, email and Google sign-in are required" });
       return;
@@ -718,7 +709,7 @@ export class DeveloperController {
         response.status(403).json({ error: "Google account email does not match the submitted email" });
         return;
       }
-      result = await this.apiKeyService.createApiKey({ name, email, allowedOrigins, verifiedByGoogle: true });
+      result = await this.apiKeyService.createApiKey({ name, email, verifiedByGoogle: true });
     } catch (error) {
       this.sendApiKeyError(response, error, "API key generation is unavailable");
       return;
