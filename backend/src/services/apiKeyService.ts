@@ -70,7 +70,7 @@ export class ApiKeyService {
     };
   }
 
-  async createApiKey(input: { name: string; email: string; otp: string; allowedOrigins?: string[] }) {
+  async createApiKey(input: { name: string; email: string; otp?: string; allowedOrigins?: string[]; verifiedByGoogle?: boolean }) {
     if (!canPersist()) {
       throw new ApiKeyServiceError("MongoDB is required to generate API keys", 503);
     }
@@ -80,7 +80,9 @@ export class ApiKeyService {
     if (!name) {
       throw new ApiKeyServiceError("App name is required", 400);
     }
-    await this.verifyOtp(email, input.otp, "create");
+    if (!input.verifiedByGoogle) {
+      await this.verifyOtp(email, input.otp || "", "create");
+    }
 
     const activeKeyCount = await ApiKeyModel.countDocuments({ email, revoked: false });
     if (activeKeyCount >= env.API_MAX_ACTIVE_KEYS_PER_EMAIL) {
@@ -123,13 +125,15 @@ export class ApiKeyService {
     };
   }
 
-  async revokeApiKeys(input: { email: string; otp: string; keyPrefix?: string }) {
+  async revokeApiKeys(input: { email: string; otp?: string; keyPrefix?: string; verifiedByGoogle?: boolean }) {
     if (!canPersist()) {
       throw new ApiKeyServiceError("MongoDB is required to revoke API keys", 503);
     }
 
     const email = normalizeEmail(input.email);
-    await this.verifyOtp(email, input.otp, "revoke");
+    if (!input.verifiedByGoogle) {
+      await this.verifyOtp(email, input.otp || "", "revoke");
+    }
 
     const filter: Record<string, unknown> = { email, revoked: false };
     if (input.keyPrefix?.trim()) {

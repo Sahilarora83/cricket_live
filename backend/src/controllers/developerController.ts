@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { ApiKeyServiceError, type ApiKeyService } from "../services/apiKeyService.js";
+import { FirebaseAuthError, verifyFirebaseIdToken } from "../services/firebaseAuthService.js";
 
 export class DeveloperController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
@@ -104,7 +105,7 @@ export class DeveloperController {
         <div class="side-card">
           <p class="fine">Free mode active</p>
           <h2 style="margin-top: 4px;">Live scores API</h2>
-          <p class="muted">Google sign-in, OTP verification, domain locked widget keys.</p>
+          <p class="muted">Google sign-in and domain locked widget keys.</p>
         </div>
       </aside>
 
@@ -137,7 +138,7 @@ export class DeveloperController {
               </div>
               <div class="stats">
                 <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
-                <div class="stat"><strong>OTP</strong><span>Email verified</span></div>
+                <div class="stat"><strong>Email</strong><span>Google verified</span></div>
                 <div class="stat"><strong>Domain</strong><span>Origin locked</span></div>
               </div>
             </div>
@@ -147,7 +148,7 @@ export class DeveloperController {
                 <div class="auth-row">
                   <div>
                     <h2>Account access</h2>
-                    <p class="muted">Sign in first. The same Google email will be used for OTP and key ownership.</p>
+              <p class="muted">Sign in with Google. The same Google email will own the API key.</p>
                   </div>
                   <span class="badge">Firebase Auth</span>
                 </div>
@@ -175,13 +176,6 @@ export class DeveloperController {
               Allowed website domain
               <input name="allowedOrigin" placeholder="https://example.com" required />
             </label>
-            <div class="grid2">
-              <button id="sendCreateOtpBtn" type="button" class="secondary">Send OTP</button>
-              <label>
-                OTP
-                <input name="otp" inputmode="numeric" maxlength="6" placeholder="123456" required />
-              </label>
-            </div>
             <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
 
@@ -205,7 +199,7 @@ export class DeveloperController {
           <div class="card-head">
             <div>
               <h2>Revoke leaked key</h2>
-              <p class="muted">Verify your email with OTP, then revoke all active keys or one key prefix.</p>
+              <p class="muted">Sign in with Google, then revoke all active keys or one key prefix.</p>
             </div>
             <span class="badge">Recovery</span>
           </div>
@@ -218,13 +212,6 @@ export class DeveloperController {
               <label>
                 Key prefix optional
                 <input name="keyPrefix" placeholder="cricket_live_xxxxx" />
-              </label>
-            </div>
-            <div class="grid2">
-              <button id="sendRevokeOtpBtn" type="button" class="secondary">Send revoke OTP</button>
-              <label>
-                OTP
-                <input name="otp" inputmode="numeric" maxlength="6" placeholder="123456" required />
               </label>
             </div>
             <button type="submit" class="danger">Revoke key</button>
@@ -324,7 +311,7 @@ export class DeveloperController {
           userPhoto.hidden = true;
           userInitial.hidden = false;
         }
-        setStatus("Signed in as " + email + ". Send OTP to continue.", "ok");
+        setStatus("Signed in as " + email + ". You can generate an API key now.", "ok");
       }
 
       setFormsEnabled(false);
@@ -374,25 +361,6 @@ export class DeveloperController {
         return payload;
       }
 
-      document.getElementById("sendCreateOtpBtn").addEventListener("click", async () => {
-        if (!currentUser) {
-          setStatus("Please sign in with Google first.", "bad");
-          return;
-        }
-        const button = document.getElementById("sendCreateOtpBtn");
-        const formData = new FormData(form);
-        button.disabled = true;
-        setStatus("Sending OTP...");
-        try {
-          const payload = await postJson("/api/developer/api-key-otp", { email: formData.get("email"), purpose: "create" });
-          setStatus(payload.data.delivered ? "OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.", "ok");
-        } catch (error) {
-          setStatus(error.message || "Could not send OTP", "bad");
-        } finally {
-          button.disabled = false;
-        }
-      });
-
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!currentUser) {
@@ -406,10 +374,11 @@ export class DeveloperController {
 
         try {
           const formData = new FormData(form);
+          const firebaseIdToken = await currentUser.getIdToken();
           const payload = await postJson("/api/developer/api-keys", {
             name: formData.get("name"),
             email: formData.get("email"),
-            otp: formData.get("otp"),
+            firebaseIdToken,
             allowedOrigins: [formData.get("allowedOrigin")]
           });
 
@@ -428,25 +397,6 @@ export class DeveloperController {
         }
       });
 
-      document.getElementById("sendRevokeOtpBtn").addEventListener("click", async () => {
-        if (!currentUser) {
-          setStatus("Please sign in with Google first.", "bad");
-          return;
-        }
-        const button = document.getElementById("sendRevokeOtpBtn");
-        const formData = new FormData(revokeForm);
-        button.disabled = true;
-        setStatus("Sending revoke OTP...");
-        try {
-          const payload = await postJson("/api/developer/api-key-otp", { email: formData.get("email"), purpose: "revoke" });
-          setStatus(payload.data.delivered ? "Revoke OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.", "ok");
-        } catch (error) {
-          setStatus(error.message || "Could not send OTP", "bad");
-        } finally {
-          button.disabled = false;
-        }
-      });
-
       revokeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!currentUser) {
@@ -458,9 +408,10 @@ export class DeveloperController {
         button.disabled = true;
         setStatus("Revoking...");
         try {
+          const firebaseIdToken = await currentUser.getIdToken();
           const payload = await postJson("/api/developer/api-keys/revoke", {
             email: formData.get("email"),
-            otp: formData.get("otp"),
+            firebaseIdToken,
             keyPrefix: formData.get("keyPrefix")
           });
           setStatus("Revoked " + payload.data.revoked + " active key(s).", "ok");
@@ -750,19 +701,24 @@ export class DeveloperController {
   createApiKey = async (request: Request, response: Response) => {
     const name = typeof request.body?.name === "string" ? request.body.name : "";
     const email = typeof request.body?.email === "string" ? request.body.email : "";
-    const otp = typeof request.body?.otp === "string" ? request.body.otp : "";
+    const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
     const allowedOrigins = Array.isArray(request.body?.allowedOrigins)
       ? request.body.allowedOrigins.filter((item: unknown): item is string => typeof item === "string")
       : [];
 
-    if (!name.trim() || !email.trim() || !otp.trim()) {
-      response.status(400).json({ error: "Name, email and OTP are required" });
+    if (!name.trim() || !email.trim() || !firebaseIdToken.trim()) {
+      response.status(400).json({ error: "Name, email and Google sign-in are required" });
       return;
     }
 
     let result;
     try {
-      result = await this.apiKeyService.createApiKey({ name, email, otp, allowedOrigins });
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      if (verifiedUser.email !== email.trim().toLowerCase()) {
+        response.status(403).json({ error: "Google account email does not match the submitted email" });
+        return;
+      }
+      result = await this.apiKeyService.createApiKey({ name, email, allowedOrigins, verifiedByGoogle: true });
     } catch (error) {
       this.sendApiKeyError(response, error, "API key generation is unavailable");
       return;
@@ -776,16 +732,21 @@ export class DeveloperController {
 
   revokeApiKeys = async (request: Request, response: Response) => {
     const email = typeof request.body?.email === "string" ? request.body.email : "";
-    const otp = typeof request.body?.otp === "string" ? request.body.otp : "";
+    const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
     const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : undefined;
 
-    if (!email.trim() || !otp.trim()) {
-      response.status(400).json({ error: "Email and OTP are required" });
+    if (!email.trim() || !firebaseIdToken.trim()) {
+      response.status(400).json({ error: "Email and Google sign-in are required" });
       return;
     }
 
     try {
-      const result = await this.apiKeyService.revokeApiKeys({ email, otp, keyPrefix });
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      if (verifiedUser.email !== email.trim().toLowerCase()) {
+        response.status(403).json({ error: "Google account email does not match the submitted email" });
+        return;
+      }
+      const result = await this.apiKeyService.revokeApiKeys({ email, keyPrefix, verifiedByGoogle: true });
       response.json({ data: result, message: "API key revoked." });
     } catch (error) {
       this.sendApiKeyError(response, error, "API key revoke is unavailable");
@@ -793,7 +754,7 @@ export class DeveloperController {
   };
 
   private sendApiKeyError(response: Response, error: unknown, fallback: string) {
-    const status = error instanceof ApiKeyServiceError ? error.status : 503;
+    const status = error instanceof ApiKeyServiceError ? error.status : error instanceof FirebaseAuthError ? 401 : 503;
     response.status(status).json({
       error: error instanceof Error ? error.message : fallback
     });
