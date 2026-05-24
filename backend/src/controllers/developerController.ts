@@ -8,9 +8,11 @@ export class DeveloperController {
   getApiKeyPortal = (_request: Request, response: Response) => {
     response.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com; frame-src https://cricketapi-14e90.firebaseapp.com https://accounts.google.com"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com; frame-src https://cricketapi-14e90.firebaseapp.com https://accounts.google.com"
     );
     response.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     response.type("html").send(`<!doctype html>
 <html lang="en">
   <head>
@@ -32,6 +34,10 @@ export class DeveloperController {
       .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; font-weight: 450; gap: 10px; padding: 11px 12px; text-decoration: none; }
       .nav-item.active { background: #24272d; color: #ffffff; }
       .nav-dot { background: #5de49b; border-radius: 99px; height: 8px; width: 8px; }
+      .nav-item .nav-dot { visibility: hidden; }
+      .nav-item.active .nav-dot { visibility: visible; }
+      .mobile-nav { display: none; gap: 8px; margin: 14px 0 0; overflow-x: auto; padding-bottom: 4px; }
+      .mobile-nav .nav-item { background: #171a20; border: 1px solid #30343b; flex: 0 0 auto; padding: 10px 12px; white-space: nowrap; }
       .side-card { border: 1px solid #2a2e36; border-radius: 14px; margin-top: auto; padding: 14px; background: #171a20; }
       .workspace { min-width: 0; padding: 22px; }
       .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 16px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
@@ -68,6 +74,7 @@ export class DeveloperController {
       button.primary { background: #16a367; color: #fff; }
       button.secondary { background: #2b3038; color: #f4f7fb; }
       button.danger { background: #ef4444; color: #fff; }
+      button.tiny { font-size: 12px; min-height: 34px; padding: 0 11px; }
       button:disabled { cursor: not-allowed; opacity: .45; transform: none; }
       .auth-loading button, .auth-loading input, .auth-loading textarea { pointer-events: none; }
       .skeleton { animation: pulse 1.35s ease-in-out infinite; background: linear-gradient(90deg, #1a1e24 0%, #262b34 50%, #1a1e24 100%); background-size: 220% 100%; border-radius: 8px; color: transparent !important; display: inline-block; min-height: 1em; }
@@ -96,7 +103,7 @@ export class DeveloperController {
       .meter { background: #111419; border: 1px solid #30343b; border-radius: 999px; height: 10px; overflow: hidden; }
       .meter > div { background: #16a367; height: 100%; width: 0%; }
       .keys-table { border: 1px solid #30343b; border-radius: 10px; overflow: hidden; }
-      .key-row { align-items: center; display: grid; gap: 12px; grid-template-columns: 1.3fr 1fr .9fr .8fr; padding: 13px 14px; }
+      .key-row { align-items: center; display: grid; gap: 12px; grid-template-columns: 1.25fr .9fr .75fr .8fr auto; padding: 13px 14px; }
       .key-row + .key-row { border-top: 1px solid #30343b; }
       .key-head { background: #171a20; color: #8f98a3; font-size: 12px; text-transform: uppercase; }
       .key-prefix { color: #dce3eb; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -106,7 +113,7 @@ export class DeveloperController {
       .muted { color: #8f98a3; font-size: 14px; margin-top: 6px; }
       .fine { color: #7f8896; font-size: 12px; }
       [hidden] { display: none !important; }
-      @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 16px; } .hero { grid-template-columns: 1fr; } }
+      @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 14px; } .topbar { top: 10px; } .mobile-nav { display: flex; } .hero { grid-template-columns: 1fr; } }
       @media (max-width: 840px) { .usage-grid { grid-template-columns: repeat(2, 1fr); } .key-row { grid-template-columns: 1fr; } .key-head { display: none; } }
       @media (max-width: 640px) { .grid2, .stats, .usage-grid { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
     </style>
@@ -122,10 +129,10 @@ export class DeveloperController {
           </div>
         </div>
         <nav class="nav">
-          <a class="nav-item active" href="#"><span class="nav-dot"></span> API keys</a>
-          <a class="nav-item" href="/api/developer/api-keys">Dashboard</a>
-          <a class="nav-item" href="#embed">Embed widget</a>
-          <a class="nav-item" href="#revoke">Revoke key</a>
+          <a class="nav-item active" data-nav="dashboard" href="#dashboard"><span class="nav-dot"></span> Dashboard</a>
+          <a class="nav-item" data-nav="usage" href="#usage"><span class="nav-dot"></span> Usage</a>
+          <a class="nav-item" data-nav="embed" href="#embed"><span class="nav-dot"></span> Embed widget</a>
+          <a class="nav-item" data-nav="revoke" href="#revoke"><span class="nav-dot"></span> Revoke key</a>
         </nav>
         <div class="side-card">
           <p class="fine">Free mode active</p>
@@ -153,9 +160,15 @@ export class DeveloperController {
             <button id="signOutBtn" class="secondary" type="button" hidden>Sign out</button>
           </div>
         </header>
+        <nav class="mobile-nav">
+          <a class="nav-item active" data-nav="dashboard" href="#dashboard">Dashboard</a>
+          <a class="nav-item" data-nav="usage" href="#usage">Usage</a>
+          <a class="nav-item" data-nav="embed" href="#embed">Embed</a>
+          <a class="nav-item" data-nav="revoke" href="#revoke">Revoke</a>
+        </nav>
 
         <div class="content">
-          <section class="hero">
+          <section id="dashboard" class="hero">
             <div class="intro">
               <div>
                 <p class="eyebrow">Cricket Live Command</p>
@@ -218,11 +231,25 @@ export class DeveloperController {
               <button id="testBtn" type="button">Test key</button>
             </div>
             <p id="testStatus" class="status"></p>
-            <div id="embed" class="result-title">Embed snippet</div>
+            <div class="result-title">Embed snippet</div>
             <textarea id="example" readonly></textarea>
           </section>
             </div>
           </section>
+
+      <section id="embed" class="panel">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Embed widget</h2>
+              <p class="muted">Paste this snippet in any website. Replace YOUR_API_KEY with your active key.</p>
+            </div>
+            <span class="badge">Copy paste</span>
+          </div>
+          <textarea id="embedTemplate" readonly></textarea>
+          <p class="status">Generate an API key first, then replace the placeholder key in this snippet.</p>
+        </div>
+      </section>
 
       <section id="usage" class="panel">
         <div class="card">
@@ -249,7 +276,7 @@ export class DeveloperController {
           </div>
           <div class="meter"><div id="usageMeter"></div></div>
           <div id="keysTable" class="keys-table" style="margin-top:16px;">
-            <div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div>
+            <div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div>
             <div class="key-row"><div class="muted">Sign in to load usage.</div></div>
           </div>
         </div>
@@ -285,7 +312,6 @@ export class DeveloperController {
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-      import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
       import { getAuth, GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
       const firebaseConfig = {
@@ -299,10 +325,6 @@ export class DeveloperController {
       };
 
       const firebaseApp = initializeApp(firebaseConfig);
-      void isSupported().then((supported) => {
-        if (supported) getAnalytics(firebaseApp);
-      }).catch(() => {});
-
       const auth = getAuth(firebaseApp);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
@@ -311,6 +333,7 @@ export class DeveloperController {
       const result = document.getElementById("result");
       const apiKeyBox = document.getElementById("apiKey");
       const exampleBox = document.getElementById("example");
+      const embedTemplate = document.getElementById("embedTemplate");
       const testStatus = document.getElementById("testStatus");
       const portalStatus = document.getElementById("portalStatus");
       const quotaStatus = document.getElementById("quotaStatus");
@@ -334,6 +357,9 @@ export class DeveloperController {
       let currentKey = "";
       let currentUser = null;
       let usageTimer = 0;
+
+      embedTemplate.value = '<div id="cricket-live-widget">Loading live cricket scores...</div>\\n' +
+        '<script async src="' + window.location.origin + '/api/developer/widget.js" data-api-key="YOUR_API_KEY" data-target="cricket-live-widget" data-refresh="30000"><\\/script>';
 
       function setStatus(message, type) {
         portalStatus.className = "status" + (type ? " " + type : "");
@@ -381,15 +407,17 @@ export class DeveloperController {
         usageMeter.style.width = quota > 0 ? Math.min((used / quota) * 100, 100).toFixed(1) + "%" : "0%";
         usageUpdatedAt.textContent = "Updated " + new Date().toLocaleTimeString();
         const rows = Array.isArray(data.keys) ? data.keys : [];
-        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div>' +
+        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div>' +
           (rows.length ? rows.map((key) => {
             const statusClass = key.revoked ? "revoked" : "active";
             const statusText = key.revoked ? "Revoked" : "Active";
+            const action = key.revoked ? '<span class="fine">--</span>' : '<button class="danger tiny" type="button" data-delete-key="' + escapeHtml(key.keyPrefix) + '">Delete</button>';
             return '<div class="key-row">' +
               '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name) + '</div></div>' +
               '<div>' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div>' +
               '<div><span class="pill ' + statusClass + '">' + statusText + '</span></div>' +
               '<div class="fine">' + escapeHtml(formatDate(key.lastUsedAt)) + '</div>' +
+              '<div>' + action + '</div>' +
             '</div>';
           }).join("") : '<div class="key-row"><div class="muted">No API keys yet.</div></div>');
       }
@@ -401,7 +429,7 @@ export class DeveloperController {
         usageRateLimit.textContent = "--";
         usageMeter.style.width = "0%";
         usageUpdatedAt.textContent = "Waiting";
-        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div><div class="key-row"><div class="muted">Sign in to load usage.</div></div>';
+        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div><div class="key-row"><div class="muted">Sign in to load usage.</div></div>';
       }
 
       function syncSignedInUser(user) {
@@ -454,6 +482,32 @@ export class DeveloperController {
       resetUsage();
       onAuthStateChanged(auth, syncSignedInUser);
 
+      function currentSectionFromHash() {
+        const id = (location.hash || "#dashboard").replace("#", "");
+        return ["dashboard", "usage", "embed", "revoke"].includes(id) ? id : "dashboard";
+      }
+
+      function setActiveNav(id) {
+        document.querySelectorAll("[data-nav]").forEach((link) => {
+          link.classList.toggle("active", link.getAttribute("data-nav") === id);
+        });
+      }
+
+      function scrollToCurrentSection() {
+        const id = currentSectionFromHash();
+        setActiveNav(id);
+        const section = document.getElementById(id);
+        if (section) section.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+
+      document.querySelectorAll("[data-nav]").forEach((link) => {
+        link.addEventListener("click", () => {
+          window.setTimeout(scrollToCurrentSection, 0);
+        });
+      });
+      window.addEventListener("hashchange", scrollToCurrentSection);
+      setActiveNav(currentSectionFromHash());
+
       googleSignInBtn.addEventListener("click", async () => {
         googleSignInBtn.disabled = true;
         setStatus("Opening Google sign-in...");
@@ -497,6 +551,37 @@ export class DeveloperController {
         if (!response.ok) throw new Error(payload.error || "Request failed");
         return payload;
       }
+
+      async function revokeKeyPrefix(keyPrefix) {
+        if (!currentUser) {
+          setStatus("Please sign in with Google first.", "bad");
+          return;
+        }
+        const confirmed = window.confirm("Delete this API key? Existing widgets using this key will stop working.");
+        if (!confirmed) return;
+        setStatus("Deleting API key...");
+        const firebaseIdToken = await currentUser.getIdToken();
+        const payload = await postJson("/api/developer/api-keys/revoke", {
+          email: currentUser.email,
+          firebaseIdToken,
+          keyPrefix
+        });
+        setStatus("Deleted " + payload.data.revoked + " API key.", "ok");
+        await fetchUsage();
+      }
+
+      keysTable.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-delete-key]");
+        if (!button) return;
+        button.disabled = true;
+        try {
+          await revokeKeyPrefix(button.getAttribute("data-delete-key") || "");
+        } catch (error) {
+          setStatus(error.message || "Could not delete key", "bad");
+        } finally {
+          button.disabled = false;
+        }
+      });
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();

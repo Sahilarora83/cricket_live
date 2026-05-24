@@ -45,7 +45,6 @@ export function createRoutes(
   router.get("/developer/api-keys", developerController.getApiKeyPortal);
   router.get("/developer/widget.js", developerController.getWidgetScript);
   router.get("/developer/api-keys/me", developerRateLimit, developerController.getMyApiKeys);
-  router.post("/developer/api-key-otp", developerRateLimit, developerController.requestApiKeyOtp);
   router.post("/developer/api-keys", developerRateLimit, developerController.createApiKey);
   router.post("/developer/api-keys/revoke", developerRateLimit, developerController.revokeApiKeys);
 
