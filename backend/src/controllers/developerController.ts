@@ -22,16 +22,17 @@ export class DeveloperController {
     <style>
       :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; background: #0b0d10; color: #f3f5f7; }
-      body:before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 34% -8%, rgba(25, 195, 125, .14), transparent 28%), radial-gradient(circle at 100% 12%, rgba(66, 153, 225, .10), transparent 26%); }
-      .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; position: relative; }
-      .sidebar { background: #0f1115; border-right: 1px solid #24272e; padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; }
+      body { margin: 0; min-height: 100vh; background: #0b0d10; color: #f3f5f7; font-weight: 400; }
+      body:before { content: ""; position: fixed; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(22, 163, 103, .10), transparent 34%), radial-gradient(circle at 95% 0%, rgba(47, 128, 237, .10), transparent 28%); }
+      .shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; position: relative; }
+      .sidebar { background: rgba(15, 17, 21, .94); border-right: 1px solid #24272e; padding: 22px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; }
       .brand-row { align-items: center; display: flex; gap: 12px; padding: 0 10px; }
-      .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 10px; display: flex; font-weight: 700; height: 38px; justify-content: center; width: 38px; }
-      .brand-title { font-size: 16px; font-weight: 650; }
+      .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 12px; display: flex; font-weight: 650; height: 38px; justify-content: center; width: 38px; }
+      .brand-title { font-size: 16px; font-weight: 560; }
       .brand-sub { color: #8f98a3; font-size: 12px; margin-top: 2px; }
-      .nav { display: grid; gap: 6px; }
-      .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; font-weight: 450; gap: 10px; padding: 11px 12px; text-decoration: none; }
+      .nav { display: grid; gap: 5px; }
+      .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; font-weight: 430; gap: 10px; padding: 11px 12px; text-decoration: none; transition: background .18s ease, color .18s ease, transform .18s ease; }
+      .nav-item:hover { background: #171b22; color: #eef3f8; transform: translateX(1px); }
       .nav-item.active { background: #24272d; color: #ffffff; }
       .nav-dot { background: #5de49b; border-radius: 99px; height: 8px; width: 8px; }
       .nav-item .nav-dot { visibility: hidden; }
@@ -39,37 +40,37 @@ export class DeveloperController {
       .mobile-nav { display: none; gap: 8px; margin: 14px 0 0; overflow-x: auto; padding-bottom: 4px; }
       .mobile-nav .nav-item { background: #171a20; border: 1px solid #30343b; flex: 0 0 auto; padding: 10px 12px; white-space: nowrap; }
       .side-card { border: 1px solid #2a2e36; border-radius: 14px; margin-top: auto; padding: 14px; background: #171a20; }
-      .workspace { min-width: 0; padding: 22px; }
-      .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 16px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
-      .crumbs { color: #9da6b3; font-size: 14px; font-weight: 500; }
+      .workspace { min-width: 0; padding: 22px 28px 34px; }
+      .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 18px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 18px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
+      .crumbs { color: #9da6b3; font-size: 14px; font-weight: 430; }
       .auth-actions { align-items: center; display: flex; gap: 10px; }
       .user-card { align-items: center; display: flex; gap: 10px; }
       .avatar { border-radius: 99px; border: 1px solid #3a404b; height: 34px; object-fit: cover; width: 34px; }
-      .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 650; justify-content: center; }
-      .content { margin: 28px auto 0; max-width: 1220px; }
-      .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .86fr); gap: 18px; align-items: start; }
-      .intro, .card { background: #202124; border: 1px solid #30343b; border-radius: 12px; box-shadow: 0 18px 44px rgba(0, 0, 0, .20); }
-      .intro { padding: 26px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
-      .eyebrow { color: #62d99f; font-size: 12px; font-weight: 600; letter-spacing: .08em; margin: 0 0 14px; text-transform: uppercase; }
-      h1 { font-size: clamp(2rem, 3vw, 2.35rem); font-weight: 600; line-height: 1.12; margin: 0 0 12px; max-width: 720px; }
-      h2 { font-size: 18px; font-weight: 600; margin: 0; }
+      .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 560; justify-content: center; }
+      .content { margin: 28px auto 0; max-width: 1260px; }
+      .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(380px, .78fr); gap: 22px; align-items: start; }
+      .intro, .card { background: rgba(31, 33, 38, .92); border: 1px solid #30343b; border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .18); }
+      .intro { min-height: 300px; padding: 28px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
+      .eyebrow { color: #62d99f; font-size: 12px; font-weight: 560; letter-spacing: .08em; margin: 0 0 14px; text-transform: uppercase; }
+      h1 { font-size: clamp(2rem, 3vw, 2.55rem); font-weight: 520; line-height: 1.12; margin: 0 0 12px; max-width: 720px; }
+      h2 { font-size: 18px; font-weight: 560; margin: 0; }
       p { color: #aab3bf; line-height: 1.58; margin: 0; }
       code { background: #101318; border: 1px solid #30343b; border-radius: 6px; color: #e8edf2; padding: 2px 6px; }
       .stats { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 24px; }
       .stat { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 16px; }
-      .stat strong { display: block; font-size: 18px; font-weight: 600; margin-bottom: 3px; }
-      .stat span { color: #8f98a3; font-size: 12px; font-weight: 500; text-transform: uppercase; }
+      .stat strong { display: block; font-size: 18px; font-weight: 540; margin-bottom: 3px; }
+      .stat span { color: #8f98a3; font-size: 12px; font-weight: 430; text-transform: uppercase; }
       .card { padding: 24px; }
       .card-head { align-items: center; display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-      .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 600; padding: 8px 12px; white-space: nowrap; }
+      .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 520; padding: 8px 12px; white-space: nowrap; }
       .auth-panel { border: 1px solid #30343b; border-radius: 12px; background: #171a20; display: grid; gap: 12px; margin-bottom: 16px; padding: 14px; }
       .auth-row { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
       form { display: grid; gap: 14px; }
-      label { color: #dce3eb; display: grid; gap: 7px; font-size: 13px; font-weight: 550; }
+      label { color: #dce3eb; display: grid; gap: 7px; font-size: 13px; font-weight: 520; }
       input, textarea { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; font-weight: 400; outline: 0; padding: 14px 15px; width: 100%; }
       input:focus, textarea:focus { border-color: #5de49b; box-shadow: 0 0 0 4px rgba(93, 228, 155, .12); }
       input:disabled { color: #9da6b3; }
-      button { background: #ffffff; border: 0; border-radius: 9px; color: #0d0f12; cursor: pointer; font: inherit; font-weight: 600; min-height: 44px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
+      button { background: #ffffff; border: 0; border-radius: 10px; color: #0d0f12; cursor: pointer; font: inherit; font-weight: 560; min-height: 44px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
       button:hover { box-shadow: 0 14px 28px rgba(255, 255, 255, .10); transform: translateY(-1px); }
       button.primary { background: #16a367; color: #fff; }
       button.secondary { background: #2b3038; color: #f4f7fb; }
@@ -91,15 +92,20 @@ export class DeveloperController {
       .result.visible { display: grid; }
       .result-title { color: #ffffff; font-weight: 600; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-      .status { background: #181b21; border: 1px solid #373d47; border-left: 5px solid #7c8798; border-radius: 10px; color: #c2cbd7; margin: 0; padding: 12px 13px; }
-      .ok { background: rgba(24, 166, 101, .12); border-color: rgba(93, 228, 155, .28); border-left-color: #5de49b; color: #bdf8d8; }
-      .bad { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .34); border-left-color: #ef4444; color: #ffc7c7; }
+      .status { background: #181b21; border: 1px solid #373d47; border-left: 4px solid #7c8798; border-radius: 10px; color: #c2cbd7; margin: 0; padding: 12px 13px; }
+      .ok { background: rgba(24, 166, 101, .11); border-color: rgba(93, 228, 155, .26); border-left-color: #5de49b; color: #bdf8d8; }
+      .bad { background: rgba(239, 68, 68, .10); border-color: rgba(239, 68, 68, .28); border-left-color: #ef4444; color: #ffd6d6; }
       .panel { margin-top: 24px; }
       .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
       .usage-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
       .usage-card { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 14px; }
       .usage-card span { color: #8f98a3; display: block; font-size: 12px; margin-bottom: 7px; }
       .usage-card strong { color: #f3f5f7; font-size: 20px; font-weight: 600; }
+      .docs-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+      .endpoint { background: #171a20; border: 1px solid #30343b; border-radius: 12px; padding: 14px; }
+      .endpoint code { display: inline-block; margin-bottom: 9px; }
+      .endpoint p { font-size: 13px; }
+      .preview-box { background: #0f1217; border: 1px dashed #3c4654; border-radius: 12px; display: grid; gap: 10px; margin-top: 14px; padding: 14px; }
       .meter { background: #111419; border: 1px solid #30343b; border-radius: 999px; height: 10px; overflow: hidden; }
       .meter > div { background: #16a367; height: 100%; width: 0%; }
       .keys-table { border: 1px solid #30343b; border-radius: 10px; overflow: hidden; }
@@ -113,9 +119,9 @@ export class DeveloperController {
       .muted { color: #8f98a3; font-size: 14px; margin-top: 6px; }
       .fine { color: #7f8896; font-size: 12px; }
       [hidden] { display: none !important; }
-      @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 14px; } .topbar { top: 10px; } .mobile-nav { display: flex; } .hero { grid-template-columns: 1fr; } }
-      @media (max-width: 840px) { .usage-grid { grid-template-columns: repeat(2, 1fr); } .key-row { grid-template-columns: 1fr; } .key-head { display: none; } }
-      @media (max-width: 640px) { .grid2, .stats, .usage-grid { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
+      @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 14px; } .topbar { top: 10px; } .mobile-nav { display: flex; } .hero { grid-template-columns: 1fr; } .intro { min-height: auto; } }
+      @media (max-width: 840px) { .usage-grid, .docs-grid { grid-template-columns: repeat(2, 1fr); } .key-row { grid-template-columns: 1fr; } .key-head { display: none; } }
+      @media (max-width: 640px) { .grid2, .stats, .usage-grid, .docs-grid { grid-template-columns: 1fr; } .workspace { padding: 10px; } .content { margin-top: 16px; } .intro, .card { padding: 18px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } .mobile-nav { margin-top: 10px; } h1 { font-size: 32px; } }
     </style>
   </head>
   <body class="auth-loading">
@@ -132,6 +138,7 @@ export class DeveloperController {
           <a class="nav-item active" data-nav="dashboard" href="#dashboard"><span class="nav-dot"></span> Dashboard</a>
           <a class="nav-item" data-nav="usage" href="#usage"><span class="nav-dot"></span> Usage</a>
           <a class="nav-item" data-nav="embed" href="#embed"><span class="nav-dot"></span> Embed widget</a>
+          <a class="nav-item" data-nav="docs" href="#docs"><span class="nav-dot"></span> API docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke"><span class="nav-dot"></span> Revoke key</a>
         </nav>
         <div class="side-card">
@@ -164,6 +171,7 @@ export class DeveloperController {
           <a class="nav-item active" data-nav="dashboard" href="#dashboard">Dashboard</a>
           <a class="nav-item" data-nav="usage" href="#usage">Usage</a>
           <a class="nav-item" data-nav="embed" href="#embed">Embed</a>
+          <a class="nav-item" data-nav="docs" href="#docs">Docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke">Revoke</a>
         </nav>
 
@@ -248,6 +256,10 @@ export class DeveloperController {
           </div>
           <textarea id="embedTemplate" readonly></textarea>
           <p class="status">Generate an API key first, then replace the placeholder key in this snippet.</p>
+          <div class="preview-box">
+            <div class="fine">Preview container</div>
+            <div id="widgetPreview">Loading live cricket scores...</div>
+          </div>
         </div>
       </section>
 
@@ -278,6 +290,36 @@ export class DeveloperController {
           <div id="keysTable" class="keys-table" style="margin-top:16px;">
             <div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div>
             <div class="key-row"><div class="muted">Sign in to load usage.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="docs" class="panel">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>API docs</h2>
+              <p class="muted">Use <code>x-api-key</code> for direct API calls. Widget embed uses the same key.</p>
+            </div>
+            <span class="badge">v1</span>
+          </div>
+          <div class="docs-grid">
+            <div class="endpoint">
+              <code>GET /api/v1/matches</code>
+              <p>Live, upcoming, and recent IPL matches.</p>
+            </div>
+            <div class="endpoint">
+              <code>GET /api/v1/live-match</code>
+              <p>Current live match with score summary.</p>
+            </div>
+            <div class="endpoint">
+              <code>GET /api/v1/score/:matchId</code>
+              <p>Detailed score for one match.</p>
+            </div>
+            <div class="endpoint">
+              <code>GET /api/system-status</code>
+              <p>Backend uptime and scraper health status.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -484,7 +526,7 @@ export class DeveloperController {
 
       function currentSectionFromHash() {
         const id = (location.hash || "#dashboard").replace("#", "");
-        return ["dashboard", "usage", "embed", "revoke"].includes(id) ? id : "dashboard";
+        return ["dashboard", "usage", "embed", "docs", "revoke"].includes(id) ? id : "dashboard";
       }
 
       function setActiveNav(id) {
