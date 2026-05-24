@@ -76,6 +76,7 @@ export class ApiKeyService {
         409
       );
     }
+    await this.assertCreateAllowed(email);
 
     const { key, keyPrefix } = generateApiKey();
     const record = await ApiKeyModel.create({
@@ -118,7 +119,7 @@ export class ApiKeyService {
       filter.keyPrefix = input.keyPrefix.trim();
     }
 
-    const result = await ApiKeyModel.updateMany(filter, { $set: { revoked: true } });
+    const result = await ApiKeyModel.updateMany(filter, { $set: { revoked: true, revokedAt: new Date() } });
     if (result.modifiedCount === 0) {
       throw new ApiKeyServiceError("No active API key found for this email.", 404);
     }
@@ -181,6 +182,43 @@ export class ApiKeyService {
         remaining: Math.max(apiKey.monthlyQuota - updatedEmailUsageCount, 0)
       }
     };
+  }
+
+  private async assertCreateAllowed(email: string) {
+    if (env.API_KEY_CREATE_COOLDOWN_SECONDS > 0) {
+      const lastKey = await ApiKeyModel.findOne({ email }).sort({ createdAt: -1 }).lean();
+      if (lastKey?.createdAt) {
+        const secondsSinceLastKey = (Date.now() - new Date(lastKey.createdAt).getTime()) / 1000;
+        if (secondsSinceLastKey < env.API_KEY_CREATE_COOLDOWN_SECONDS) {
+          throw new ApiKeyServiceError(
+            `Please wait ${Math.ceil(env.API_KEY_CREATE_COOLDOWN_SECONDS - secondsSinceLastKey)} seconds before generating another key.`,
+            429
+          );
+        }
+      }
+    }
+
+    if (env.API_KEY_REVOKE_COOLDOWN_SECONDS > 0) {
+      const lastRevokedKey = await ApiKeyModel.findOne({ email, revoked: true, revokedAt: { $exists: true } }).sort({ revokedAt: -1 }).lean();
+      if (lastRevokedKey?.revokedAt) {
+        const secondsSinceRevoke = (Date.now() - new Date(lastRevokedKey.revokedAt).getTime()) / 1000;
+        if (secondsSinceRevoke < env.API_KEY_REVOKE_COOLDOWN_SECONDS) {
+          throw new ApiKeyServiceError(
+            `Please wait ${Math.ceil(env.API_KEY_REVOKE_COOLDOWN_SECONDS - secondsSinceRevoke)} seconds after revoking before generating a new key.`,
+            429
+          );
+        }
+      }
+    }
+
+    const dayStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const keysCreatedToday = await ApiKeyModel.countDocuments({ email, createdAt: { $gte: dayStart } });
+    if (keysCreatedToday >= env.API_KEY_DAILY_CREATE_LIMIT) {
+      throw new ApiKeyServiceError(
+        `Daily API key generation limit reached. You can create ${env.API_KEY_DAILY_CREATE_LIMIT} key${env.API_KEY_DAILY_CREATE_LIMIT === 1 ? "" : "s"} per 24 hours.`,
+        429
+      );
+    }
   }
 
   private async verifyOtp(email: string, code: string, purpose: "create" | "revoke") {

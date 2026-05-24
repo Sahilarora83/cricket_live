@@ -12,6 +12,7 @@ const apiKeySchema = new mongoose.Schema(
     usageMonth: { type: String, required: true },
     usageCount: { type: Number, required: true, default: 0 },
     revoked: { type: Boolean, required: true, default: false },
+    revokedAt: Date,
     lastUsedAt: Date
   },
   { timestamps: true }

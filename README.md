@@ -130,6 +130,9 @@ COMMENTARY_LIMIT=30
 API_REQUIRE_KEY=false
 API_FREE_MONTHLY_QUOTA=10000
 API_MAX_ACTIVE_KEYS_PER_EMAIL=1
+API_KEY_DAILY_CREATE_LIMIT=3
+API_KEY_CREATE_COOLDOWN_SECONDS=60
+API_KEY_REVOKE_COOLDOWN_SECONDS=300
 API_KEY_OTP_TTL_MINUTES=10
 API_KEY_OTP_RESEND_SECONDS=60
 API_KEY_OTP_MAX_ATTEMPTS=5
@@ -230,6 +233,9 @@ Each generated key starts on the open-source plan:
 Plan: open-source
 Monthly quota: 10,000 requests per email
 Active key limit: 1 key per email
+Create limit: 3 keys per 24 hours
+Re-generate cooldown: 60 seconds
+Revoke-to-create cooldown: 300 seconds
 Auth header: x-api-key
 ```
 
