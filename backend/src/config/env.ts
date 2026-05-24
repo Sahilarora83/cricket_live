@@ -30,6 +30,8 @@ const schema = z.object({
     .string()
     .transform((value) => value === "true")
     .default("false"),
+  API_KEY_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60000),
+  API_KEY_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   API_FREE_MONTHLY_QUOTA: z.coerce.number().default(10000),
   API_MAX_ACTIVE_KEYS_PER_EMAIL: z.coerce.number().int().min(1).default(1),
   API_KEY_DAILY_CREATE_LIMIT: z.coerce.number().int().min(1).default(3),

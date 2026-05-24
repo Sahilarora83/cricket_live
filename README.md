@@ -128,6 +128,8 @@ SCORE_UPDATER_INTERVAL_MS=5000
 SERIES_SCRAPER_INTERVAL_MS=600000
 COMMENTARY_LIMIT=30
 API_REQUIRE_KEY=false
+API_KEY_RATE_LIMIT_WINDOW_MS=60000
+API_KEY_RATE_LIMIT_MAX=600
 API_FREE_MONTHLY_QUOTA=10000
 API_MAX_ACTIVE_KEYS_PER_EMAIL=1
 API_KEY_DAILY_CREATE_LIMIT=3
@@ -232,6 +234,7 @@ Each generated key starts on the open-source plan:
 ```text
 Plan: open-source
 Monthly quota: 10,000 requests per email
+Rate limit: 600 requests per API key per minute
 Active key limit: 1 key per email
 Create limit: 3 keys per 24 hours
 Re-generate cooldown: 60 seconds
@@ -247,6 +250,9 @@ x-api-quota-limit
 x-api-quota-used
 x-api-quota-remaining
 x-api-key-usage-used
+x-api-key-rate-limit-limit
+x-api-key-rate-limit-remaining
+x-api-key-rate-limit-reset
 ```
 
 ## Website Widget
