@@ -210,6 +210,7 @@ curl https://cricket-live-0we0.onrender.com/api/live-match
 Users can sign in with Google at `/api/developer/api-keys`, generate an API key, and use the IPL feed in their own projects. The full key is shown only once, so store it safely.
 
 The developer portal uses Firebase Google sign-in for key generation and revoke actions. No OTP or website-domain input is required.
+The portal also shows live usage for the signed-in account, including active/revoked key prefixes, monthly quota, remaining requests, and per-key rate limits.
 
 Use the key:
 

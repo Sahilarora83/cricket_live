@@ -79,11 +79,26 @@ export class DeveloperController {
       .bad { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .34); border-left-color: #ef4444; color: #ffc7c7; }
       .panel { margin-top: 24px; }
       .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+      .usage-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+      .usage-card { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 14px; }
+      .usage-card span { color: #8f98a3; display: block; font-size: 12px; margin-bottom: 7px; }
+      .usage-card strong { color: #f3f5f7; font-size: 20px; font-weight: 600; }
+      .meter { background: #111419; border: 1px solid #30343b; border-radius: 999px; height: 10px; overflow: hidden; }
+      .meter > div { background: #16a367; height: 100%; width: 0%; }
+      .keys-table { border: 1px solid #30343b; border-radius: 10px; overflow: hidden; }
+      .key-row { align-items: center; display: grid; gap: 12px; grid-template-columns: 1.3fr 1fr .9fr .8fr; padding: 13px 14px; }
+      .key-row + .key-row { border-top: 1px solid #30343b; }
+      .key-head { background: #171a20; color: #8f98a3; font-size: 12px; text-transform: uppercase; }
+      .key-prefix { color: #dce3eb; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .pill { border: 1px solid #3a404b; border-radius: 999px; color: #c9d2df; display: inline-flex; font-size: 12px; padding: 5px 9px; width: fit-content; }
+      .pill.active { border-color: rgba(93, 228, 155, .35); color: #bdf8d8; }
+      .pill.revoked { border-color: rgba(239, 68, 68, .35); color: #ffc7c7; }
       .muted { color: #8f98a3; font-size: 14px; margin-top: 6px; }
       .fine { color: #7f8896; font-size: 12px; }
       [hidden] { display: none !important; }
       @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 16px; } .hero { grid-template-columns: 1fr; } }
-      @media (max-width: 640px) { .grid2, .stats { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
+      @media (max-width: 840px) { .usage-grid { grid-template-columns: repeat(2, 1fr); } .key-row { grid-template-columns: 1fr; } .key-head { display: none; } }
+      @media (max-width: 640px) { .grid2, .stats, .usage-grid { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
     </style>
   </head>
   <body>
@@ -190,6 +205,29 @@ export class DeveloperController {
             </div>
           </section>
 
+      <section id="usage" class="panel">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Usage</h2>
+              <p class="muted">Live API usage for your Google account.</p>
+            </div>
+            <span id="usageUpdatedAt" class="badge">Waiting</span>
+          </div>
+          <div class="usage-grid">
+            <div class="usage-card"><span>Used this month</span><strong id="usageUsed">--</strong></div>
+            <div class="usage-card"><span>Remaining</span><strong id="usageRemaining">--</strong></div>
+            <div class="usage-card"><span>Monthly quota</span><strong id="usageQuota">--</strong></div>
+            <div class="usage-card"><span>Rate limit</span><strong id="usageRateLimit">--</strong></div>
+          </div>
+          <div class="meter"><div id="usageMeter"></div></div>
+          <div id="keysTable" class="keys-table" style="margin-top:16px;">
+            <div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div>
+            <div class="key-row"><div class="muted">Sign in to load usage.</div></div>
+          </div>
+        </div>
+      </section>
+
       <section id="revoke" class="panel">
         <div class="card">
           <div class="card-head">
@@ -257,11 +295,19 @@ export class DeveloperController {
       const userEmail = document.getElementById("userEmail");
       const userPhoto = document.getElementById("userPhoto");
       const userInitial = document.getElementById("userInitial");
+      const usageUsed = document.getElementById("usageUsed");
+      const usageRemaining = document.getElementById("usageRemaining");
+      const usageQuota = document.getElementById("usageQuota");
+      const usageRateLimit = document.getElementById("usageRateLimit");
+      const usageMeter = document.getElementById("usageMeter");
+      const usageUpdatedAt = document.getElementById("usageUpdatedAt");
+      const keysTable = document.getElementById("keysTable");
       const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm button, #revokeForm input, #revokeForm button"));
       const createEmailInput = form.elements.email;
       const revokeEmailInput = revokeForm.elements.email;
       let currentKey = "";
       let currentUser = null;
+      let usageTimer = 0;
 
       function setStatus(message, type) {
         portalStatus.className = "status" + (type ? " " + type : "");
@@ -272,6 +318,64 @@ export class DeveloperController {
         gatedControls.forEach((control) => {
           control.disabled = !enabled;
         });
+      }
+
+      function formatNumber(value) {
+        return Number(value || 0).toLocaleString();
+      }
+
+      function formatDate(value) {
+        return value ? new Date(value).toLocaleString() : "--";
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+      }
+
+      async function fetchUsage() {
+        if (!currentUser) return;
+        const firebaseIdToken = await currentUser.getIdToken();
+        const response = await fetch("/api/developer/api-keys/me", {
+          headers: { Authorization: "Bearer " + firebaseIdToken },
+          cache: "no-store"
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Could not load usage");
+        renderUsage(payload.data);
+      }
+
+      function renderUsage(data) {
+        const used = Number(data.emailUsageCount || 0);
+        const quota = Number(data.monthlyQuota || 0);
+        const remaining = Math.max(Number(data.remaining || 0), 0);
+        usageUsed.textContent = formatNumber(used);
+        usageRemaining.textContent = formatNumber(remaining);
+        usageQuota.textContent = formatNumber(quota);
+        usageRateLimit.textContent = formatNumber(data.rateLimit?.limit) + "/min";
+        usageMeter.style.width = quota > 0 ? Math.min((used / quota) * 100, 100).toFixed(1) + "%" : "0%";
+        usageUpdatedAt.textContent = "Updated " + new Date().toLocaleTimeString();
+        const rows = Array.isArray(data.keys) ? data.keys : [];
+        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div>' +
+          (rows.length ? rows.map((key) => {
+            const statusClass = key.revoked ? "revoked" : "active";
+            const statusText = key.revoked ? "Revoked" : "Active";
+            return '<div class="key-row">' +
+              '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name) + '</div></div>' +
+              '<div>' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div>' +
+              '<div><span class="pill ' + statusClass + '">' + statusText + '</span></div>' +
+              '<div class="fine">' + escapeHtml(formatDate(key.lastUsedAt)) + '</div>' +
+            '</div>';
+          }).join("") : '<div class="key-row"><div class="muted">No API keys yet.</div></div>');
+      }
+
+      function resetUsage() {
+        usageUsed.textContent = "--";
+        usageRemaining.textContent = "--";
+        usageQuota.textContent = "--";
+        usageRateLimit.textContent = "--";
+        usageMeter.style.width = "0%";
+        usageUpdatedAt.textContent = "Waiting";
+        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div></div><div class="key-row"><div class="muted">Sign in to load usage.</div></div>';
       }
 
       function syncSignedInUser(user) {
@@ -287,6 +391,9 @@ export class DeveloperController {
           createEmailInput.readOnly = false;
           revokeEmailInput.readOnly = false;
           result.classList.remove("visible");
+          clearInterval(usageTimer);
+          usageTimer = 0;
+          resetUsage();
           setStatus("Sign in with Google to unlock API key generation.");
           return;
         }
@@ -308,6 +415,11 @@ export class DeveloperController {
           userInitial.hidden = false;
         }
         setStatus("Signed in as " + email + ". You can generate an API key now.", "ok");
+        void fetchUsage().catch((error) => setStatus(error.message || "Could not load usage", "bad"));
+        clearInterval(usageTimer);
+        usageTimer = window.setInterval(() => {
+          void fetchUsage().catch(() => {});
+        }, 10000);
       }
 
       setFormsEnabled(false);
@@ -384,6 +496,7 @@ export class DeveloperController {
           quotaStatus.textContent = "Copy it now. Limit: " + payload.data.monthlyQuota + " requests/month for this email.";
           result.classList.add("visible");
           setStatus("API key created successfully.", "ok");
+          void fetchUsage().catch(() => {});
         } catch (error) {
           setStatus(error.message || "Could not generate API key", "bad");
         } finally {
@@ -410,6 +523,7 @@ export class DeveloperController {
             keyPrefix: formData.get("keyPrefix")
           });
           setStatus("Revoked " + payload.data.revoked + " active key(s).", "ok");
+          void fetchUsage().catch(() => {});
         } catch (error) {
           setStatus(error.message || "Could not revoke key", "bad");
         } finally {
@@ -690,6 +804,24 @@ export class DeveloperController {
       response.status(201).json({ data: result, message: "OTP generated." });
     } catch (error) {
       this.sendApiKeyError(response, error, "OTP generation is unavailable");
+    }
+  };
+
+  getMyApiKeys = async (request: Request, response: Response) => {
+    const authorization = request.header("authorization") || "";
+    const firebaseIdToken = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+
+    if (!firebaseIdToken) {
+      response.status(401).json({ error: "Google sign-in is required" });
+      return;
+    }
+
+    try {
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      const result = await this.apiKeyService.listApiKeysForEmail(verifiedUser.email);
+      response.json({ data: result });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "API key usage is unavailable");
     }
   };
 

@@ -127,6 +127,57 @@ export class ApiKeyService {
     return { revoked: result.modifiedCount };
   }
 
+  async listApiKeysForEmail(emailInput: string) {
+    if (!canPersist()) {
+      throw new ApiKeyServiceError("MongoDB is required to load API key usage", 503);
+    }
+
+    const email = normalizeEmail(emailInput);
+    const usageMonth = currentUsageMonth();
+    const keys = await ApiKeyModel.find({ email })
+      .sort({ revoked: 1, createdAt: -1 })
+      .limit(20)
+      .lean();
+    const activeKeys = keys.filter((key) => !key.revoked);
+    const emailUsageCount = activeKeys
+      .filter((key) => key.usageMonth === usageMonth)
+      .reduce((total, key) => total + Number(key.usageCount || 0), 0);
+    const monthlyQuota = activeKeys[0]?.monthlyQuota ?? env.API_FREE_MONTHLY_QUOTA;
+
+    return {
+      email,
+      usageMonth,
+      monthlyQuota,
+      emailUsageCount,
+      remaining: Math.max(monthlyQuota - emailUsageCount, 0),
+      activeKeyCount: activeKeys.length,
+      maxActiveKeysPerEmail: env.API_MAX_ACTIVE_KEYS_PER_EMAIL,
+      rateLimit: {
+        limit: env.API_KEY_RATE_LIMIT_MAX,
+        windowMs: env.API_KEY_RATE_LIMIT_WINDOW_MS
+      },
+      limits: {
+        dailyCreateLimit: env.API_KEY_DAILY_CREATE_LIMIT,
+        createCooldownSeconds: env.API_KEY_CREATE_COOLDOWN_SECONDS,
+        revokeCooldownSeconds: env.API_KEY_REVOKE_COOLDOWN_SECONDS
+      },
+      keys: keys.map((key) => ({
+        name: key.name,
+        email: key.email,
+        keyPrefix: key.keyPrefix,
+        plan: key.plan,
+        monthlyQuota: key.monthlyQuota,
+        usageMonth: key.usageMonth,
+        usageCount: key.usageMonth === usageMonth ? key.usageCount : 0,
+        remaining: key.revoked || key.usageMonth !== usageMonth ? key.monthlyQuota : Math.max(key.monthlyQuota - key.usageCount, 0),
+        revoked: key.revoked,
+        createdAt: key.createdAt,
+        revokedAt: key.revokedAt,
+        lastUsedAt: key.lastUsedAt
+      }))
+    };
+  }
+
   async consumeApiKey(rawKey: string) {
     if (!canPersist()) {
       return { ok: false as const, status: 503, error: "API key storage is unavailable" };
