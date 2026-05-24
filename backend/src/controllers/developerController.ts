@@ -56,6 +56,10 @@ export class DeveloperController {
       .avatar { border-radius: 99px; border: 1px solid #3a404b; height: 34px; object-fit: cover; width: 34px; }
       .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 560; justify-content: center; }
       .content { margin: 28px auto 0; max-width: 1260px; }
+      .page { display: none; animation: fadeIn .2s ease; }
+      .page.active-page { display: block; }
+      .page.hero.active-page { display: grid; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(380px, .78fr); gap: 22px; align-items: start; }
       .intro, .card { background: rgba(31, 33, 38, .92); border: 1px solid #30343b; border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .18); }
       .intro:before, .card:before { content: ""; pointer-events: none; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, rgba(34,197,94,.24), rgba(59,130,246,.14), rgba(255,255,255,.04)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
@@ -122,6 +126,10 @@ export class DeveloperController {
       .endpoint code { display: inline-block; margin-bottom: 9px; }
       .endpoint p { font-size: 13px; }
       .preview-box { background: #0f1217; border: 1px dashed #3c4654; border-radius: 12px; display: grid; gap: 10px; margin-top: 14px; padding: 14px; }
+      .two-col { display: grid; gap: 16px; grid-template-columns: 1.2fr .8fr; }
+      .activity-list { display: grid; gap: 10px; }
+      .activity-item { align-items: center; background: rgba(17,24,39,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; display: flex; gap: 12px; padding: 13px; }
+      .activity-dot { background: #22c55e; border-radius: 99px; height: 9px; width: 9px; }
       .split { display: grid; gap: 16px; grid-template-columns: 1.05fr .95fr; }
       .control-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
       select { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; padding: 12px; width: 100%; }
@@ -150,7 +158,7 @@ export class DeveloperController {
       .fine { color: #7f8896; font-size: 12px; }
       [hidden] { display: none !important; }
       @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 14px; } .topbar { top: 10px; } .mobile-nav { display: flex; } .hero { grid-template-columns: 1fr; } .intro { min-height: auto; } }
-      @media (max-width: 840px) { .usage-grid, .docs-grid, .analytics-strip { grid-template-columns: repeat(2, 1fr); } .split { grid-template-columns: 1fr; } .key-row { grid-template-columns: 1fr; } .search { min-width: 0; width: 100%; } }
+      @media (max-width: 840px) { .usage-grid, .docs-grid, .analytics-strip { grid-template-columns: repeat(2, 1fr); } .split, .two-col { grid-template-columns: 1fr; } .key-row { grid-template-columns: 1fr; } .search { min-width: 0; width: 100%; } }
       @media (max-width: 640px) { .grid2, .stats, .usage-grid, .docs-grid, .analytics-strip, .control-grid { grid-template-columns: 1fr; } .workspace { padding: 10px; } .content { margin-top: 16px; } .intro, .card { padding: 18px; } .topbar, .topbar-left, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } .mobile-nav { margin-top: 10px; } h1 { font-size: 32px; } .key-card-meta { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -165,11 +173,18 @@ export class DeveloperController {
           </div>
         </div>
         <nav class="nav">
-          <a class="nav-item active" data-nav="dashboard" href="#dashboard"><span class="nav-dot"></span> Dashboard</a>
-          <a class="nav-item" data-nav="usage" href="#usage"><span class="nav-dot"></span> Usage</a>
+          <a class="nav-item active" data-nav="overview" href="#overview"><span class="nav-dot"></span> Overview</a>
+          <a class="nav-item" data-nav="keys" href="#keys"><span class="nav-dot"></span> API Keys</a>
+          <a class="nav-item" data-nav="analytics" href="#analytics"><span class="nav-dot"></span> Analytics</a>
+          <a class="nav-item" data-nav="logs" href="#logs"><span class="nav-dot"></span> Logs</a>
+          <a class="nav-item" data-nav="playground" href="#playground"><span class="nav-dot"></span> Playground</a>
+          <a class="nav-item" data-nav="webhooks" href="#webhooks"><span class="nav-dot"></span> Webhooks</a>
+          <a class="nav-item" data-nav="billing" href="#billing"><span class="nav-dot"></span> Billing</a>
+          <a class="nav-item" data-nav="team" href="#team"><span class="nav-dot"></span> Team</a>
           <a class="nav-item" data-nav="embed" href="#embed"><span class="nav-dot"></span> Embed widget</a>
           <a class="nav-item" data-nav="docs" href="#docs"><span class="nav-dot"></span> API docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke"><span class="nav-dot"></span> Revoke key</a>
+          <a class="nav-item" data-nav="settings" href="#settings"><span class="nav-dot"></span> Settings</a>
         </nav>
         <div class="side-card">
           <p class="fine">Free mode active</p>
@@ -181,7 +196,7 @@ export class DeveloperController {
       <section class="workspace">
         <header class="topbar">
           <div class="topbar-left">
-            <div class="crumbs">Dashboard / API keys</div>
+            <div id="crumbs" class="crumbs">Developer Console / Overview</div>
             <label class="search" aria-label="Search">
               <span>/</span>
               <input id="portalSearch" placeholder="Search keys, docs..." />
@@ -205,15 +220,57 @@ export class DeveloperController {
           </div>
         </header>
         <nav class="mobile-nav">
-          <a class="nav-item active" data-nav="dashboard" href="#dashboard">Dashboard</a>
-          <a class="nav-item" data-nav="usage" href="#usage">Usage</a>
+          <a class="nav-item active" data-nav="overview" href="#overview">Overview</a>
+          <a class="nav-item" data-nav="keys" href="#keys">Keys</a>
+          <a class="nav-item" data-nav="analytics" href="#analytics">Analytics</a>
+          <a class="nav-item" data-nav="playground" href="#playground">Playground</a>
           <a class="nav-item" data-nav="embed" href="#embed">Embed</a>
           <a class="nav-item" data-nav="docs" href="#docs">Docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke">Revoke</a>
         </nav>
 
         <div class="content">
-          <section id="dashboard" class="hero">
+          <section id="overview" class="page active-page">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <p class="eyebrow">Cricket Live Command</p>
+                  <h1>Developer platform for live cricket data</h1>
+                  <p class="muted">Build widgets, apps, dashboards, and live score experiences from one API surface.</p>
+                </div>
+                <span class="status-badge"><span class="pulse"></span> Live data healthy</span>
+              </div>
+              <div class="usage-grid">
+                <div class="usage-card"><span>Total API calls</span><strong id="heroCalls">--</strong></div>
+                <div class="usage-card"><span>Active API keys</span><strong id="heroKeys">--</strong></div>
+                <div class="usage-card"><span>Monthly quota</span><strong id="overviewQuota">--</strong></div>
+                <div class="usage-card"><span>Current uptime</span><strong>99.9%</strong></div>
+              </div>
+              <div class="hero-chart" aria-hidden="true">
+                <span style="height: 34%;"></span><span style="height: 56%;"></span><span style="height: 42%;"></span><span style="height: 72%;"></span><span style="height: 50%;"></span><span style="height: 88%;"></span><span style="height: 64%;"></span><span style="height: 78%;"></span>
+              </div>
+            </div>
+            <div class="two-col panel">
+              <div class="card">
+                <div class="card-head"><div><h2>Recent activity</h2><p class="muted">Latest platform events.</p></div></div>
+                <div class="activity-list">
+                  <div class="activity-item"><span class="activity-dot"></span><div><strong>API status checked</strong><div class="fine">System healthy</div></div></div>
+                  <div class="activity-item"><span class="activity-dot"></span><div><strong>Usage synced</strong><div class="fine">Updates every few seconds after sign-in</div></div></div>
+                  <div class="activity-item"><span class="activity-dot"></span><div><strong>Widget SDK ready</strong><div class="fine">Copy-paste embed available</div></div></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head"><div><h2>Quick actions</h2><p class="muted">Jump into common workflows.</p></div></div>
+                <div class="key-actions">
+                  <button class="primary" type="button" data-nav="keys">Generate key</button>
+                  <button class="secondary" type="button" data-nav="playground">Open playground</button>
+                  <button class="secondary" type="button" data-nav="docs">View docs</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="keys" class="page hero">
             <div class="intro">
               <div>
                 <p class="eyebrow">Cricket Live Command</p>
@@ -221,12 +278,9 @@ export class DeveloperController {
                 <p>Create and manage keys for the live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
               </div>
               <div class="stats">
-                <div class="stat"><strong id="heroCalls">--</strong><span>Total API calls</span></div>
-                <div class="stat"><strong id="heroKeys">--</strong><span>Active keys</span></div>
-                <div class="stat"><strong>99.9%</strong><span>Uptime</span></div>
-              </div>
-              <div class="hero-chart" aria-hidden="true">
-                <span style="height: 34%;"></span><span style="height: 56%;"></span><span style="height: 42%;"></span><span style="height: 72%;"></span><span style="height: 50%;"></span><span style="height: 88%;"></span><span style="height: 64%;"></span><span style="height: 78%;"></span>
+                <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
+                <div class="stat"><strong>Email</strong><span>Verified owner</span></div>
+                <div class="stat"><strong>Rotate</strong><span>Revoke anytime</span></div>
               </div>
             </div>
 
@@ -285,7 +339,21 @@ export class DeveloperController {
             </div>
           </section>
 
-      <section id="embed" class="panel">
+          <div class="card panel">
+            <div class="card-head">
+              <div>
+                <h2>Your API keys</h2>
+                <p class="muted">Search, copy prefixes, view docs, or revoke keys.</p>
+              </div>
+              <span id="usageUpdatedAt" class="badge">Waiting</span>
+            </div>
+            <div id="keysTable" class="keys-table">
+              <div class="empty-state">Sign in to load API keys.</div>
+            </div>
+          </div>
+          </section>
+
+      <section id="embed" class="page">
         <div class="card">
           <div class="card-head">
             <div>
@@ -312,14 +380,14 @@ export class DeveloperController {
         </div>
       </section>
 
-      <section id="usage" class="panel">
+      <section id="analytics" class="page">
         <div class="card">
           <div class="card-head">
             <div>
-              <h2>Usage</h2>
-              <p class="muted">Live API usage for your Google account.</p>
+              <h2>Analytics</h2>
+              <p class="muted">Request volume, quota, rate limit, and reliability signals.</p>
             </div>
-            <span id="usageUpdatedAt" class="badge">Waiting</span>
+            <span class="badge">Realtime</span>
           </div>
           <div class="usage-grid">
             <div class="usage-card"><span>Used this month</span><strong id="usageUsed">--</strong></div>
@@ -350,13 +418,38 @@ export class DeveloperController {
               <div class="sparkline"><span style="height:20%;"></span><span style="height:14%;"></span><span style="height:24%;"></span><span style="height:12%;"></span><span style="height:18%;"></span><span style="height:10%;"></span></div>
             </div>
           </div>
-          <div id="keysTable" class="keys-table" style="margin-top:16px;">
-            <div class="empty-state">Sign in to load API keys.</div>
+        </div>
+      </section>
+
+      <section id="logs" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>Request logs</h2><p class="muted">Terminal-inspired request history. Live logs will appear here as traffic comes in.</p></div><span class="badge">Logs</span></div>
+          <div class="activity-list">
+            <div class="activity-item"><span class="activity-dot"></span><div><code>GET /api/v1/live-match</code><div class="fine">200 OK · low latency · waiting for authenticated traffic</div></div></div>
+            <div class="activity-item"><span class="activity-dot"></span><div><code>GET /api/v1/matches</code><div class="fine">Cached response available</div></div></div>
           </div>
         </div>
       </section>
 
-      <section id="docs" class="panel">
+      <section id="playground" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>API playground</h2><p class="muted">Select an endpoint, inspect headers, and copy generated code.</p></div><span class="badge">Interactive</span></div>
+          <div class="split">
+            <div>
+              <label>Endpoint<select><option>GET /api/v1/live-match</option><option>GET /api/v1/matches</option><option>GET /api/v1/score/:matchId</option></select></label>
+              <div class="panel"><button class="primary" type="button">Send request</button></div>
+            </div>
+            <pre class="code-block">{
+  "data": {
+    "status": "live",
+    "source": "cricbuzz"
+  }
+}</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="docs" class="page">
         <div class="card">
           <div class="card-head">
             <div>
@@ -394,7 +487,33 @@ export class DeveloperController {
         </div>
       </section>
 
-      <section id="revoke" class="panel">
+      <section id="webhooks" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>Webhooks</h2><p class="muted">Create endpoints for score updates, match starts, wickets, and results.</p></div><span class="badge">Soon</span></div>
+          <div class="empty-state">Webhook endpoints and delivery history will be managed here.</div>
+        </div>
+      </section>
+
+      <section id="billing" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>Billing</h2><p class="muted">Free mode is active. Paid plans can unlock higher quotas later.</p></div><span class="badge">Free</span></div>
+          <div class="usage-grid">
+            <div class="usage-card"><span>Plan</span><strong>Free</strong></div>
+            <div class="usage-card"><span>Invoices</span><strong>0</strong></div>
+            <div class="usage-card"><span>Team seats</span><strong>1</strong></div>
+            <div class="usage-card"><span>SLA</span><strong>Community</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="team" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>Team</h2><p class="muted">Invite developers, assign roles, and track activity.</p></div><span class="badge">Solo</span></div>
+          <div class="empty-state">Team collaboration can be enabled when paid plans are added.</div>
+        </div>
+      </section>
+
+      <section id="revoke" class="page">
         <div class="card">
           <div class="card-head">
             <div>
@@ -416,6 +535,16 @@ export class DeveloperController {
             </div>
             <button type="submit" class="danger">Revoke key</button>
           </form>
+        </div>
+      </section>
+
+      <section id="settings" class="page">
+        <div class="card">
+          <div class="card-head"><div><h2>Settings</h2><p class="muted">Profile, security, notifications, API defaults, and appearance.</p></div><span class="badge">Console</span></div>
+          <div class="docs-grid">
+            <div class="endpoint"><h2>Security</h2><p>Google sign-in, token verification, rate limits, and key revocation are enabled.</p></div>
+            <div class="endpoint"><h2>Appearance</h2><p>Dark mode is optimized for developer workflows.</p></div>
+          </div>
         </div>
       </section>
         </div>
@@ -465,8 +594,10 @@ export class DeveloperController {
       const keysTable = document.getElementById("keysTable");
       const heroCalls = document.getElementById("heroCalls");
       const heroKeys = document.getElementById("heroKeys");
+      const overviewQuota = document.getElementById("overviewQuota");
       const portalSearch = document.getElementById("portalSearch");
       const themeToggle = document.getElementById("themeToggle");
+      const crumbs = document.getElementById("crumbs");
       const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm button, #revokeForm input, #revokeForm button"));
       const createEmailInput = form.elements.email;
       const revokeEmailInput = revokeForm.elements.email;
@@ -519,6 +650,7 @@ export class DeveloperController {
         usageUsed.textContent = formatNumber(used);
         usageRemaining.textContent = formatNumber(remaining);
         usageQuota.textContent = formatNumber(quota);
+        overviewQuota.textContent = formatNumber(quota);
         usageRateLimit.textContent = formatNumber(data.rateLimit?.limit) + "/min";
         heroCalls.textContent = formatNumber(used);
         heroKeys.textContent = formatNumber(data.activeKeyCount || 0);
@@ -549,6 +681,7 @@ export class DeveloperController {
         usageUsed.textContent = "--";
         usageRemaining.textContent = "--";
         usageQuota.textContent = "--";
+        overviewQuota.textContent = "--";
         usageRateLimit.textContent = "--";
         heroCalls.textContent = "--";
         heroKeys.textContent = "--";
@@ -608,36 +741,41 @@ export class DeveloperController {
       onAuthStateChanged(auth, syncSignedInUser);
 
       function currentSectionFromHash() {
-        const id = (location.hash || "#dashboard").replace("#", "");
-        return ["dashboard", "usage", "embed", "docs", "revoke"].includes(id) ? id : "dashboard";
+        const id = (location.hash || "#overview").replace("#", "");
+        return ["overview", "keys", "analytics", "logs", "playground", "webhooks", "billing", "team", "embed", "docs", "revoke", "settings"].includes(id) ? id : "overview";
       }
 
       function setActiveNav(id) {
         document.querySelectorAll("[data-nav]").forEach((link) => {
           link.classList.toggle("active", link.getAttribute("data-nav") === id);
         });
+        const labels = { overview: "Overview", keys: "API Keys", analytics: "Analytics", logs: "Logs", playground: "Playground", webhooks: "Webhooks", billing: "Billing", team: "Team", embed: "Embed Widget", docs: "Documentation", revoke: "Revoke Key", settings: "Settings" };
+        crumbs.textContent = "Developer Console / " + (labels[id] || "Overview");
       }
 
-      function scrollToCurrentSection() {
+      function showCurrentSection() {
         const id = currentSectionFromHash();
         setActiveNav(id);
-        const section = document.getElementById(id);
-        if (section) section.scrollIntoView({ block: "start", behavior: "smooth" });
+        document.querySelectorAll(".page").forEach((section) => {
+          section.classList.toggle("active-page", section.id === id);
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
       document.querySelectorAll("[data-nav]").forEach((link) => {
         link.addEventListener("click", () => {
-          window.setTimeout(scrollToCurrentSection, 0);
+          window.setTimeout(showCurrentSection, 0);
         });
       });
       document.addEventListener("click", (event) => {
         const navButton = event.target.closest("button[data-nav]");
         if (!navButton) return;
-        location.hash = navButton.getAttribute("data-nav") || "dashboard";
-        window.setTimeout(scrollToCurrentSection, 0);
+        location.hash = navButton.getAttribute("data-nav") || "overview";
+        window.setTimeout(showCurrentSection, 0);
       });
-      window.addEventListener("hashchange", scrollToCurrentSection);
+      window.addEventListener("hashchange", showCurrentSection);
       setActiveNav(currentSectionFromHash());
+      showCurrentSection();
 
       portalSearch.addEventListener("input", () => {
         const query = portalSearch.value.trim().toLowerCase();
