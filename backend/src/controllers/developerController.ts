@@ -212,6 +212,58 @@ export class DeveloperController {
       .key-card:hover { border-color: #4a4a4a; box-shadow: none; transform: none; }
       .mobile-nav .nav-item { background: #202020; border-color: #303030; }
       @media (max-width: 640px) { .workspace { padding: 10px; } .topbar { border-radius: 12px; } .search { min-width: 0; } .content { margin-top: 14px; } }
+
+      /* Density reduction and responsive polish */
+      .shell { grid-template-columns: 228px minmax(0, 1fr); }
+      .sidebar { padding: 16px 10px; }
+      .brand-row { margin-bottom: 8px; }
+      .side-card { display: none; }
+      .workspace { padding: 20px 32px 56px; }
+      .content { max-width: 1020px; }
+      .page { min-height: calc(100vh - 150px); }
+      .page > .card, .page > .two-col, .page.hero.active-page { margin-inline: auto; width: 100%; }
+      .page.hero.active-page { grid-template-columns: minmax(0, .82fr) minmax(360px, .68fr); }
+      .card, .intro { padding: 22px; }
+      .card-head { margin-bottom: 18px; }
+      .usage-grid { gap: 14px; }
+      .usage-card, .stat, .endpoint, .activity-item, .chart-card, .key-card { padding: 16px; }
+      .hero-chart { height: 48px; opacity: .55; }
+      .sparkline { height: 42px; opacity: .7; }
+      .analytics-strip { gap: 14px; }
+      .docs-grid, .two-col, .split { gap: 18px; }
+      .key-card { gap: 16px; }
+      .topbar { padding: 12px 14px; }
+      .status-badge { padding: 8px 10px; }
+      .auth-actions { gap: 8px; }
+      @media (max-width: 1180px) {
+        .shell { grid-template-columns: 216px minmax(0, 1fr); }
+        .workspace { padding-inline: 22px; }
+        .content { max-width: 940px; }
+        .page.hero.active-page { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 980px) {
+        body { padding-bottom: 72px; }
+        .workspace { padding: 12px 12px 82px; }
+        .content { max-width: 100%; }
+        .topbar { position: static; }
+        .mobile-nav { background: rgba(23,23,23,.96); border: 1px solid #303030; border-radius: 16px; bottom: 10px; box-shadow: 0 14px 30px rgba(0,0,0,.28); display: flex; left: 10px; margin: 0; padding: 8px; position: fixed; right: 10px; z-index: 20; }
+        .mobile-nav .nav-item { border: 0; justify-content: center; padding: 10px 12px; }
+      }
+      @media (max-width: 760px) {
+        .topbar-left { gap: 10px; }
+        .status-badge, .icon-btn { display: none; }
+        .search { min-width: 0; width: 100%; }
+        .auth-actions { align-items: stretch; width: 100%; }
+        .user-card { min-width: 0; }
+      }
+      @media (max-width: 520px) {
+        .workspace { padding-inline: 8px; }
+        .card, .intro { padding: 16px; }
+        .card-head { align-items: flex-start; flex-direction: column; }
+        .usage-card strong { font-size: 18px; }
+        .mobile-nav .nav-item { font-size: 13px; padding-inline: 10px; }
+        #userEmail { display: none; }
+      }
     </style>
   </head>
   <body class="auth-loading">
