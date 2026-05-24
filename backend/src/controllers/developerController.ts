@@ -264,6 +264,53 @@ export class DeveloperController {
         .mobile-nav .nav-item { font-size: 13px; padding-inline: 10px; }
         #userEmail { display: none; }
       }
+
+      /* Senior UX reset: focused API-console layout */
+      .content > .page:not(.active-page) { display: none !important; }
+      .content > .page.active-page { display: block !important; }
+      .content > .page.hero.active-page { display: grid !important; }
+      .workspace { padding-top: 16px; }
+      .topbar { margin: 0 auto; max-width: 1120px; width: 100%; }
+      .content { max-width: 1120px; }
+      .page { min-height: auto; }
+      .card, .intro { background: #181818; }
+      .card { margin-bottom: 18px; }
+      .intro { min-height: 0; }
+      .hero-chart { display: none; }
+      .page#overview > .card:first-child { padding: 28px; }
+      .page#overview h1 { max-width: 760px; }
+      .page#overview .usage-grid { margin-top: 22px; }
+      .usage-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .two-col { align-items: stretch; grid-template-columns: minmax(0, 1fr) 360px; }
+      .activity-item { min-height: 64px; }
+      .page.hero.active-page { align-items: start; grid-template-columns: minmax(0, 1fr) 420px; }
+      .page.hero.active-page > .intro { order: 1; }
+      .page.hero.active-page > .card:not(.panel) { order: 2; }
+      .page.hero.active-page > .card.panel { order: 3; }
+      .key-card { max-width: 100%; }
+      .topbar-left { flex: 1; }
+      .auth-actions { flex-shrink: 0; }
+      .search { max-width: 360px; }
+      .sidebar { width: 100%; }
+      .nav-item.active { position: relative; }
+      .nav-item.active:before { background: #ececec; border-radius: 999px; content: ""; height: 18px; left: 10px; position: absolute; width: 3px; }
+      .nav-dot { display: none; }
+      .nav-item { padding-left: 18px; }
+      @media (max-width: 1180px) {
+        .topbar, .content { max-width: 100%; }
+        .two-col, .page.hero.active-page { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 760px) {
+        .topbar { gap: 12px; }
+        .crumbs { font-size: 13px; }
+        .page#overview > .card:first-child { padding: 20px; }
+        .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 520px) {
+        .usage-grid { grid-template-columns: 1fr; }
+        .auth-actions { gap: 6px; }
+        #signOutBtn, #googleSignInBtn { min-height: 40px; }
+      }
     </style>
   </head>
   <body class="auth-loading">
