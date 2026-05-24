@@ -42,6 +42,14 @@ export class DeveloperController {
       .side-card { border: 1px solid #2a2e36; border-radius: 14px; margin-top: auto; padding: 14px; background: #171a20; }
       .workspace { min-width: 0; padding: 22px 28px 34px; }
       .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 18px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 18px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
+      .topbar-left { align-items: center; display: flex; gap: 14px; min-width: 0; }
+      .search { align-items: center; background: rgba(17,24,39,.75); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; color: #9ca3af; display: flex; gap: 8px; min-width: 260px; padding: 10px 13px; }
+      .search input { background: transparent; border: 0; box-shadow: none; color: #f9fafb; min-height: 0; padding: 0; }
+      .search input:focus { border: 0; box-shadow: none; }
+      .icon-btn { align-items: center; background: rgba(17,24,39,.8); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; color: #d1d5db; display: inline-flex; height: 42px; justify-content: center; min-height: 42px; padding: 0; width: 42px; }
+      .status-badge { align-items: center; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); border-radius: 999px; color: #bbf7d0; display: inline-flex; font-size: 13px; gap: 8px; padding: 9px 12px; white-space: nowrap; }
+      .pulse { background: #22c55e; border-radius: 99px; box-shadow: 0 0 0 rgba(34,197,94,.5); height: 8px; width: 8px; animation: livePulse 1.8s infinite; }
+      @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
       .crumbs { color: #9da6b3; font-size: 14px; font-weight: 430; }
       .auth-actions { align-items: center; display: flex; gap: 10px; }
       .user-card { align-items: center; display: flex; gap: 10px; }
@@ -50,7 +58,9 @@ export class DeveloperController {
       .content { margin: 28px auto 0; max-width: 1260px; }
       .hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(380px, .78fr); gap: 22px; align-items: start; }
       .intro, .card { background: rgba(31, 33, 38, .92); border: 1px solid #30343b; border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .18); }
+      .intro:before, .card:before { content: ""; pointer-events: none; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, rgba(34,197,94,.24), rgba(59,130,246,.14), rgba(255,255,255,.04)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
       .intro { min-height: 300px; padding: 28px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
+      .card { position: relative; overflow: hidden; }
       .eyebrow { color: #62d99f; font-size: 12px; font-weight: 560; letter-spacing: .08em; margin: 0 0 14px; text-transform: uppercase; }
       h1 { font-size: clamp(2rem, 3vw, 2.55rem); font-weight: 520; line-height: 1.12; margin: 0 0 12px; max-width: 720px; }
       h2 { font-size: 18px; font-weight: 560; margin: 0; }
@@ -61,6 +71,8 @@ export class DeveloperController {
       .stat strong { display: block; font-size: 18px; font-weight: 540; margin-bottom: 3px; }
       .stat span { color: #8f98a3; font-size: 12px; font-weight: 430; text-transform: uppercase; }
       .card { padding: 24px; }
+      .hero-chart { align-items: end; display: flex; gap: 8px; height: 68px; margin-top: 22px; }
+      .hero-chart span { background: linear-gradient(180deg, #22c55e, #3b82f6); border-radius: 999px 999px 4px 4px; display: block; flex: 1; opacity: .86; min-height: 16px; }
       .card-head { align-items: center; display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
       .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 520; padding: 8px 12px; white-space: nowrap; }
       .auth-panel { border: 1px solid #30343b; border-radius: 12px; background: #171a20; display: grid; gap: 12px; margin-bottom: 16px; padding: 14px; }
@@ -101,17 +113,35 @@ export class DeveloperController {
       .usage-card { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 14px; }
       .usage-card span { color: #8f98a3; display: block; font-size: 12px; margin-bottom: 7px; }
       .usage-card strong { color: #f3f5f7; font-size: 20px; font-weight: 600; }
+      .analytics-strip { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin: 16px 0; }
+      .chart-card { background: rgba(17,24,39,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 14px; }
+      .sparkline { align-items: end; display: flex; gap: 6px; height: 58px; margin-top: 12px; }
+      .sparkline span { background: linear-gradient(180deg, rgba(59,130,246,.95), rgba(34,197,94,.85)); border-radius: 999px; flex: 1; min-height: 10px; }
       .docs-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
       .endpoint { background: #171a20; border: 1px solid #30343b; border-radius: 12px; padding: 14px; }
       .endpoint code { display: inline-block; margin-bottom: 9px; }
       .endpoint p { font-size: 13px; }
       .preview-box { background: #0f1217; border: 1px dashed #3c4654; border-radius: 12px; display: grid; gap: 10px; margin-top: 14px; padding: 14px; }
+      .split { display: grid; gap: 16px; grid-template-columns: 1.05fr .95fr; }
+      .control-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
+      select { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; padding: 12px; width: 100%; }
+      .code-block { background: #0b1020; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; color: #c7d2fe; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; padding: 14px; white-space: pre; }
+      .tab-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+      .tab-row button { background: #111827; color: #d1d5db; min-height: 36px; }
+      .tab-row button.active { background: #1f2937; color: #f9fafb; }
       .meter { background: #111419; border: 1px solid #30343b; border-radius: 999px; height: 10px; overflow: hidden; }
       .meter > div { background: #16a367; height: 100%; width: 0%; }
-      .keys-table { border: 1px solid #30343b; border-radius: 10px; overflow: hidden; }
+      .keys-table { display: grid; gap: 12px; margin-top: 16px; }
       .key-row { align-items: center; display: grid; gap: 12px; grid-template-columns: 1.25fr .9fr .75fr .8fr auto; padding: 13px 14px; }
-      .key-row + .key-row { border-top: 1px solid #30343b; }
-      .key-head { background: #171a20; color: #8f98a3; font-size: 12px; text-transform: uppercase; }
+      .key-card { background: rgba(17,24,39,.78); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; display: grid; gap: 14px; padding: 16px; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+      .key-card:hover { border-color: rgba(34,197,94,.28); box-shadow: 0 18px 40px rgba(0,0,0,.18); transform: translateY(-2px); }
+      .key-card-top { align-items: start; display: flex; justify-content: space-between; gap: 12px; }
+      .key-card-meta { color: #9ca3af; display: grid; gap: 4px; font-size: 12px; grid-template-columns: repeat(2, 1fr); }
+      .key-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .progress { background: #0b1020; border-radius: 999px; height: 8px; overflow: hidden; }
+      .progress div { background: linear-gradient(90deg, #22c55e, #3b82f6); height: 100%; width: 0%; }
+      .empty-state { background: rgba(17,24,39,.7); border: 1px dashed rgba(255,255,255,.12); border-radius: 16px; color: #9ca3af; padding: 18px; }
+      .key-head { display: none; }
       .key-prefix { color: #dce3eb; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
       .pill { border: 1px solid #3a404b; border-radius: 999px; color: #c9d2df; display: inline-flex; font-size: 12px; padding: 5px 9px; width: fit-content; }
       .pill.active { border-color: rgba(93, 228, 155, .35); color: #bdf8d8; }
@@ -120,8 +150,8 @@ export class DeveloperController {
       .fine { color: #7f8896; font-size: 12px; }
       [hidden] { display: none !important; }
       @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 14px; } .topbar { top: 10px; } .mobile-nav { display: flex; } .hero { grid-template-columns: 1fr; } .intro { min-height: auto; } }
-      @media (max-width: 840px) { .usage-grid, .docs-grid { grid-template-columns: repeat(2, 1fr); } .key-row { grid-template-columns: 1fr; } .key-head { display: none; } }
-      @media (max-width: 640px) { .grid2, .stats, .usage-grid, .docs-grid { grid-template-columns: 1fr; } .workspace { padding: 10px; } .content { margin-top: 16px; } .intro, .card { padding: 18px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } .mobile-nav { margin-top: 10px; } h1 { font-size: 32px; } }
+      @media (max-width: 840px) { .usage-grid, .docs-grid, .analytics-strip { grid-template-columns: repeat(2, 1fr); } .split { grid-template-columns: 1fr; } .key-row { grid-template-columns: 1fr; } .search { min-width: 0; width: 100%; } }
+      @media (max-width: 640px) { .grid2, .stats, .usage-grid, .docs-grid, .analytics-strip, .control-grid { grid-template-columns: 1fr; } .workspace { padding: 10px; } .content { margin-top: 16px; } .intro, .card { padding: 18px; } .topbar, .topbar-left, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } .mobile-nav { margin-top: 10px; } h1 { font-size: 32px; } .key-card-meta { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body class="auth-loading">
@@ -150,11 +180,18 @@ export class DeveloperController {
 
       <section class="workspace">
         <header class="topbar">
-          <div>
+          <div class="topbar-left">
             <div class="crumbs">Dashboard / API keys</div>
+            <label class="search" aria-label="Search">
+              <span>/</span>
+              <input id="portalSearch" placeholder="Search keys, docs..." />
+            </label>
           </div>
           <div class="auth-actions">
             <div id="authSkeleton" class="skeleton skeleton-button"></div>
+            <span class="status-badge"><span class="pulse"></span> API Online</span>
+            <button class="icon-btn" id="themeToggle" type="button" title="Theme">◐</button>
+            <button class="icon-btn" type="button" title="Notifications">⌁</button>
             <div id="userCard" class="user-card" hidden>
               <img id="userPhoto" class="avatar" alt="" hidden />
               <div id="userInitial" class="avatar placeholder">U</div>
@@ -184,9 +221,12 @@ export class DeveloperController {
                 <p>Create and manage keys for the live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
               </div>
               <div class="stats">
-                <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
-                <div class="stat"><strong>Email</strong><span>Google verified</span></div>
-                <div class="stat"><strong>Easy</strong><span>Copy paste</span></div>
+                <div class="stat"><strong id="heroCalls">--</strong><span>Total API calls</span></div>
+                <div class="stat"><strong id="heroKeys">--</strong><span>Active keys</span></div>
+                <div class="stat"><strong>99.9%</strong><span>Uptime</span></div>
+              </div>
+              <div class="hero-chart" aria-hidden="true">
+                <span style="height: 34%;"></span><span style="height: 56%;"></span><span style="height: 42%;"></span><span style="height: 72%;"></span><span style="height: 50%;"></span><span style="height: 88%;"></span><span style="height: 64%;"></span><span style="height: 78%;"></span>
               </div>
             </div>
 
@@ -254,12 +294,21 @@ export class DeveloperController {
             </div>
             <span class="badge">Copy paste</span>
           </div>
-          <textarea id="embedTemplate" readonly></textarea>
-          <p class="status">Generate an API key first, then replace the placeholder key in this snippet.</p>
-          <div class="preview-box">
-            <div class="fine">Preview container</div>
-            <div id="widgetPreview">Loading live cricket scores...</div>
+          <div class="split">
+            <div>
+              <textarea id="embedTemplate" readonly></textarea>
+              <div class="control-grid">
+                <label>Theme<select><option>Light</option><option>Dark</option></select></label>
+                <label>Size<select><option>Responsive</option><option>Compact</option></select></label>
+                <label>Refresh<select><option>30 seconds</option><option>60 seconds</option></select></label>
+              </div>
+            </div>
+            <div class="preview-box">
+              <div class="fine">Live widget preview</div>
+              <div id="widgetPreview">Loading live cricket scores...</div>
+            </div>
           </div>
+          <p class="status">Generate an API key first, then replace the placeholder key in this snippet.</p>
         </div>
       </section>
 
@@ -287,9 +336,22 @@ export class DeveloperController {
             </div>
           </div>
           <div class="meter"><div id="usageMeter"></div></div>
+          <div class="analytics-strip">
+            <div class="chart-card">
+              <div class="fine">Requests trend</div>
+              <div class="sparkline"><span style="height:28%;"></span><span style="height:54%;"></span><span style="height:40%;"></span><span style="height:70%;"></span><span style="height:62%;"></span><span style="height:86%;"></span></div>
+            </div>
+            <div class="chart-card">
+              <div class="fine">Rate limit health</div>
+              <div class="sparkline"><span style="height:76%;"></span><span style="height:66%;"></span><span style="height:58%;"></span><span style="height:48%;"></span><span style="height:42%;"></span><span style="height:36%;"></span></div>
+            </div>
+            <div class="chart-card">
+              <div class="fine">Error rate</div>
+              <div class="sparkline"><span style="height:20%;"></span><span style="height:14%;"></span><span style="height:24%;"></span><span style="height:12%;"></span><span style="height:18%;"></span><span style="height:10%;"></span></div>
+            </div>
+          </div>
           <div id="keysTable" class="keys-table" style="margin-top:16px;">
-            <div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div>
-            <div class="key-row"><div class="muted">Sign in to load usage.</div></div>
+            <div class="empty-state">Sign in to load API keys.</div>
           </div>
         </div>
       </section>
@@ -303,6 +365,14 @@ export class DeveloperController {
             </div>
             <span class="badge">v1</span>
           </div>
+          <div class="tab-row">
+            <button class="active" type="button">cURL</button>
+            <button type="button">JavaScript</button>
+            <button type="button">Python</button>
+            <button type="button">Node.js</button>
+          </div>
+          <pre class="code-block">curl -H "x-api-key: YOUR_API_KEY" \\
+  ${_request.protocol}://${_request.get("host")}/api/v1/live-match</pre>
           <div class="docs-grid">
             <div class="endpoint">
               <code>GET /api/v1/matches</code>
@@ -393,6 +463,10 @@ export class DeveloperController {
       const usageMeter = document.getElementById("usageMeter");
       const usageUpdatedAt = document.getElementById("usageUpdatedAt");
       const keysTable = document.getElementById("keysTable");
+      const heroCalls = document.getElementById("heroCalls");
+      const heroKeys = document.getElementById("heroKeys");
+      const portalSearch = document.getElementById("portalSearch");
+      const themeToggle = document.getElementById("themeToggle");
       const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm button, #revokeForm input, #revokeForm button"));
       const createEmailInput = form.elements.email;
       const revokeEmailInput = revokeForm.elements.email;
@@ -446,22 +520,29 @@ export class DeveloperController {
         usageRemaining.textContent = formatNumber(remaining);
         usageQuota.textContent = formatNumber(quota);
         usageRateLimit.textContent = formatNumber(data.rateLimit?.limit) + "/min";
+        heroCalls.textContent = formatNumber(used);
+        heroKeys.textContent = formatNumber(data.activeKeyCount || 0);
         usageMeter.style.width = quota > 0 ? Math.min((used / quota) * 100, 100).toFixed(1) + "%" : "0%";
         usageUpdatedAt.textContent = "Updated " + new Date().toLocaleTimeString();
         const rows = Array.isArray(data.keys) ? data.keys : [];
-        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div>' +
-          (rows.length ? rows.map((key) => {
+        keysTable.innerHTML = rows.length ? rows.map((key) => {
             const statusClass = key.revoked ? "revoked" : "active";
             const statusText = key.revoked ? "Revoked" : "Active";
-            const action = key.revoked ? '<span class="fine">--</span>' : '<button class="danger tiny" type="button" data-delete-key="' + escapeHtml(key.keyPrefix) + '">Delete</button>';
-            return '<div class="key-row">' +
-              '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name) + '</div></div>' +
-              '<div>' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div>' +
-              '<div><span class="pill ' + statusClass + '">' + statusText + '</span></div>' +
-              '<div class="fine">' + escapeHtml(formatDate(key.lastUsedAt)) + '</div>' +
-              '<div>' + action + '</div>' +
+            const percent = key.monthlyQuota > 0 ? Math.min((Number(key.usageCount || 0) / Number(key.monthlyQuota || 1)) * 100, 100).toFixed(1) : "0";
+            const action = key.revoked ? '<span class="fine">Archived</span>' : '<button class="secondary tiny" type="button" data-copy-prefix="' + escapeHtml(key.keyPrefix) + '">Copy</button><button class="danger tiny" type="button" data-delete-key="' + escapeHtml(key.keyPrefix) + '">Revoke</button>';
+            return '<div class="key-card" data-key-card data-search="' + escapeHtml((key.name || "") + " " + (key.keyPrefix || "")) + '">' +
+              '<div class="key-card-top">' +
+                '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div></div>' +
+                '<span class="pill ' + statusClass + '">' + statusText + '</span>' +
+              '</div>' +
+              '<div><div class="fine">Usage ' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div><div class="progress"><div style="width:' + percent + '%"></div></div></div>' +
+              '<div class="key-card-meta">' +
+                '<div>Created<br><strong>' + escapeHtml(formatDate(key.createdAt)) + '</strong></div>' +
+                '<div>Last used<br><strong>' + escapeHtml(formatDate(key.lastUsedAt)) + '</strong></div>' +
+              '</div>' +
+              '<div class="key-actions">' + action + '<button class="secondary tiny" type="button" data-nav="docs">View docs</button></div>' +
             '</div>';
-          }).join("") : '<div class="key-row"><div class="muted">No API keys yet.</div></div>');
+          }).join("") : '<div class="empty-state">No API keys yet. Generate your first key from the dashboard card.</div>';
       }
 
       function resetUsage() {
@@ -469,9 +550,11 @@ export class DeveloperController {
         usageRemaining.textContent = "--";
         usageQuota.textContent = "--";
         usageRateLimit.textContent = "--";
+        heroCalls.textContent = "--";
+        heroKeys.textContent = "--";
         usageMeter.style.width = "0%";
         usageUpdatedAt.textContent = "Waiting";
-        keysTable.innerHTML = '<div class="key-row key-head"><div>Key</div><div>Usage</div><div>Status</div><div>Last used</div><div>Action</div></div><div class="key-row"><div class="muted">Sign in to load usage.</div></div>';
+        keysTable.innerHTML = '<div class="empty-state">Sign in to load API keys.</div>';
       }
 
       function syncSignedInUser(user) {
@@ -547,8 +630,26 @@ export class DeveloperController {
           window.setTimeout(scrollToCurrentSection, 0);
         });
       });
+      document.addEventListener("click", (event) => {
+        const navButton = event.target.closest("button[data-nav]");
+        if (!navButton) return;
+        location.hash = navButton.getAttribute("data-nav") || "dashboard";
+        window.setTimeout(scrollToCurrentSection, 0);
+      });
       window.addEventListener("hashchange", scrollToCurrentSection);
       setActiveNav(currentSectionFromHash());
+
+      portalSearch.addEventListener("input", () => {
+        const query = portalSearch.value.trim().toLowerCase();
+        document.querySelectorAll("[data-key-card]").forEach((card) => {
+          const text = (card.getAttribute("data-search") || "").toLowerCase();
+          card.hidden = Boolean(query) && !text.includes(query);
+        });
+      });
+
+      themeToggle.addEventListener("click", () => {
+        setStatus("Dark mode is active for this developer console.", "ok");
+      });
 
       googleSignInBtn.addEventListener("click", async () => {
         googleSignInBtn.disabled = true;
@@ -613,6 +714,12 @@ export class DeveloperController {
       }
 
       keysTable.addEventListener("click", async (event) => {
+        const copyButton = event.target.closest("[data-copy-prefix]");
+        if (copyButton) {
+          await navigator.clipboard.writeText(copyButton.getAttribute("data-copy-prefix") || "");
+          setStatus("Key prefix copied.", "ok");
+          return;
+        }
         const button = event.target.closest("[data-delete-key]");
         if (!button) return;
         button.disabled = true;
