@@ -69,6 +69,16 @@ export class DeveloperController {
       button.secondary { background: #2b3038; color: #f4f7fb; }
       button.danger { background: #ef4444; color: #fff; }
       button:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+      .auth-loading button, .auth-loading input, .auth-loading textarea { pointer-events: none; }
+      .skeleton { animation: pulse 1.35s ease-in-out infinite; background: linear-gradient(90deg, #1a1e24 0%, #262b34 50%, #1a1e24 100%); background-size: 220% 100%; border-radius: 8px; color: transparent !important; display: inline-block; min-height: 1em; }
+      .skeleton-line { height: 18px; width: min(100%, 340px); }
+      .skeleton-button { height: 44px; width: 244px; }
+      .skeleton-card { height: 58px; width: 100%; }
+      .auth-loading .auth-actions > :not(#authSkeleton), .auth-loading #keyForm, .auth-loading #revokeForm, .auth-loading .status:not(.skeleton-status) { visibility: hidden; }
+      .auth-ready #authSkeleton { display: none; }
+      .auth-loading .skeleton-only { display: block !important; }
+      .auth-ready .skeleton-only { display: none !important; }
+      @keyframes pulse { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
       textarea { min-height: 96px; resize: vertical; }
       .result { background: #171a20; border: 1px solid #30343b; border-radius: 12px; display: none; gap: 14px; margin-top: 18px; padding: 18px; }
       .result.visible { display: grid; }
@@ -101,7 +111,7 @@ export class DeveloperController {
       @media (max-width: 640px) { .grid2, .stats, .usage-grid { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
     </style>
   </head>
-  <body>
+  <body class="auth-loading">
     <main class="shell">
       <aside class="sidebar">
         <div class="brand-row">
@@ -130,6 +140,7 @@ export class DeveloperController {
             <div class="crumbs">Dashboard / API keys</div>
           </div>
           <div class="auth-actions">
+            <div id="authSkeleton" class="skeleton skeleton-button"></div>
             <div id="userCard" class="user-card" hidden>
               <img id="userPhoto" class="avatar" alt="" hidden />
               <div id="userInitial" class="avatar placeholder">U</div>
@@ -168,6 +179,9 @@ export class DeveloperController {
                   <span class="badge">Firebase Auth</span>
                 </div>
                 <p id="portalStatus" class="status">Sign in with Google to unlock API key generation.</p>
+                <div class="skeleton-only" hidden>
+                  <div class="skeleton skeleton-line"></div>
+                </div>
               </div>
 
           <div class="card-head">
@@ -189,6 +203,11 @@ export class DeveloperController {
             </label>
             <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
+          <div class="skeleton-only" hidden>
+            <div class="skeleton skeleton-card" style="margin-bottom:12px;"></div>
+            <div class="skeleton skeleton-card" style="margin-bottom:12px;"></div>
+            <div class="skeleton skeleton-button" style="width:100%;"></div>
+          </div>
 
           <section id="result" class="result">
             <div class="result-title">Your API key</div>
@@ -219,6 +238,14 @@ export class DeveloperController {
             <div class="usage-card"><span>Remaining</span><strong id="usageRemaining">--</strong></div>
             <div class="usage-card"><span>Monthly quota</span><strong id="usageQuota">--</strong></div>
             <div class="usage-card"><span>Rate limit</span><strong id="usageRateLimit">--</strong></div>
+          </div>
+          <div id="usageSkeleton" class="skeleton-only" hidden>
+            <div class="usage-grid">
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+            </div>
           </div>
           <div class="meter"><div id="usageMeter"></div></div>
           <div id="keysTable" class="keys-table" style="margin-top:16px;">
@@ -279,7 +306,6 @@ export class DeveloperController {
       const auth = getAuth(firebaseApp);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-
       const form = document.getElementById("keyForm");
       const revokeForm = document.getElementById("revokeForm");
       const result = document.getElementById("result");
@@ -379,6 +405,8 @@ export class DeveloperController {
       }
 
       function syncSignedInUser(user) {
+        document.body.classList.remove("auth-loading");
+        document.body.classList.add("auth-ready");
         currentUser = user || null;
         const signedIn = Boolean(user);
         setFormsEnabled(signedIn);
@@ -423,6 +451,7 @@ export class DeveloperController {
       }
 
       setFormsEnabled(false);
+      resetUsage();
       onAuthStateChanged(auth, syncSignedInUser);
 
       googleSignInBtn.addEventListener("click", async () => {
