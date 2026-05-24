@@ -335,7 +335,12 @@ export class DeveloperController {
         try {
           await signInWithPopup(auth, provider);
         } catch (error) {
-          setStatus(error.message || "Google sign-in failed", "bad");
+          const message = String(error?.code || error?.message || "");
+          if (message.includes("auth/unauthorized-domain")) {
+            setStatus("Firebase Authorized domains mein " + location.hostname + " add karo, phir Google sign-in chalega.", "bad");
+          } else {
+            setStatus(error.message || "Google sign-in failed", "bad");
+          }
         } finally {
           googleSignInBtn.disabled = false;
         }
