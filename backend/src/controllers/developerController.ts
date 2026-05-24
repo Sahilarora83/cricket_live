@@ -7,7 +7,7 @@ export class DeveloperController {
   getApiKeyPortal = (_request: Request, response: Response) => {
     response.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com; frame-src https://cricketapi-14e90.firebaseapp.com https://accounts.google.com"
     );
     response.type("html").send(`<!doctype html>
 <html lang="en">
@@ -16,70 +16,143 @@ export class DeveloperController {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cricket Live API Key</title>
     <style>
-      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; background: #f4f7f2; color: #111f1a; padding: 28px; }
-      body:before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 18% 12%, rgba(12, 118, 84, .12), transparent 32%), radial-gradient(circle at 88% 2%, rgba(191, 118, 31, .10), transparent 30%); }
-      main { position: relative; width: min(1120px, 100%); margin: 0 auto; }
-      .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 24px; align-items: stretch; }
-      .intro, .card { background: rgba(255, 255, 255, .92); border: 1px solid #dfe7dc; border-radius: 18px; box-shadow: 0 22px 60px rgba(28, 45, 36, .10); }
-      .intro { padding: 34px; display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; overflow: hidden; position: relative; }
-      .eyebrow { color: #9b5c12; font-size: 12px; font-weight: 900; letter-spacing: .16em; margin: 0 0 14px; text-transform: uppercase; }
-      h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1.02; margin: 0 0 16px; max-width: 720px; }
+      body { margin: 0; min-height: 100vh; background: #0b0d10; color: #f3f5f7; }
+      body:before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 34% -8%, rgba(25, 195, 125, .14), transparent 28%), radial-gradient(circle at 100% 12%, rgba(66, 153, 225, .10), transparent 26%); }
+      .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; position: relative; }
+      .sidebar { background: #0f1115; border-right: 1px solid #24272e; padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; }
+      .brand-row { align-items: center; display: flex; gap: 12px; padding: 0 10px; }
+      .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 10px; display: flex; font-weight: 950; height: 38px; justify-content: center; width: 38px; }
+      .brand-title { font-size: 16px; font-weight: 900; }
+      .brand-sub { color: #8f98a3; font-size: 12px; margin-top: 2px; }
+      .nav { display: grid; gap: 6px; }
+      .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; gap: 10px; padding: 11px 12px; text-decoration: none; }
+      .nav-item.active { background: #24272d; color: #ffffff; }
+      .nav-dot { background: #5de49b; border-radius: 99px; height: 8px; width: 8px; }
+      .side-card { border: 1px solid #2a2e36; border-radius: 14px; margin-top: auto; padding: 14px; background: #171a20; }
+      .workspace { min-width: 0; padding: 22px; }
+      .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 16px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
+      .crumbs { color: #9da6b3; font-size: 14px; font-weight: 700; }
+      .auth-actions { align-items: center; display: flex; gap: 10px; }
+      .user-card { align-items: center; display: flex; gap: 10px; }
+      .avatar { border-radius: 99px; border: 1px solid #3a404b; height: 34px; object-fit: cover; width: 34px; }
+      .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 900; justify-content: center; }
+      .content { margin: 28px auto 0; max-width: 1220px; }
+      .hero { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); gap: 18px; align-items: stretch; }
+      .intro, .card { background: #1f2125; border: 1px solid #30343b; border-radius: 12px; box-shadow: 0 28px 70px rgba(0, 0, 0, .28); }
+      .intro { padding: 30px; display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; overflow: hidden; position: relative; }
+      .eyebrow { color: #62d99f; font-size: 12px; font-weight: 900; letter-spacing: .16em; margin: 0 0 14px; text-transform: uppercase; }
+      h1 { font-size: clamp(2.2rem, 5vw, 4.2rem); line-height: 1.02; margin: 0 0 16px; max-width: 720px; }
       h2 { font-size: 19px; margin: 0; }
-      p { color: #53625c; line-height: 1.58; margin: 0; }
-      code { background: #eef4eb; border: 1px solid #dce8d8; border-radius: 6px; color: #10231b; padding: 2px 6px; }
+      p { color: #aab3bf; line-height: 1.58; margin: 0; }
+      code { background: #101318; border: 1px solid #30343b; border-radius: 6px; color: #e8edf2; padding: 2px 6px; }
       .stats { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 34px; }
-      .stat { background: #f8faf6; border: 1px solid #e0e8dc; border-radius: 14px; padding: 16px; }
+      .stat { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 16px; }
       .stat strong { display: block; font-size: 22px; margin-bottom: 3px; }
-      .stat span { color: #66736e; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      .stat span { color: #8f98a3; font-size: 12px; font-weight: 800; text-transform: uppercase; }
       .card { padding: 24px; }
       .card-head { align-items: center; display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-      .badge { background: #10231b; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 800; padding: 8px 12px; white-space: nowrap; }
+      .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 800; padding: 8px 12px; white-space: nowrap; }
+      .auth-panel { border: 1px solid #30343b; border-radius: 12px; background: #171a20; display: grid; gap: 12px; margin-bottom: 16px; padding: 14px; }
+      .auth-row { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
       form { display: grid; gap: 14px; }
-      label { color: #20362d; display: grid; gap: 7px; font-size: 13px; font-weight: 800; }
-      input, textarea { background: #fbfcfa; border: 1px solid #d8e2d5; border-radius: 12px; color: #10231b; font: inherit; font-weight: 650; outline: 0; padding: 14px 15px; width: 100%; }
-      input:focus, textarea:focus { border-color: #149463; box-shadow: 0 0 0 4px rgba(20, 148, 99, .12); }
-      button { background: #0c8f5b; border: 0; border-radius: 12px; color: #fff; cursor: pointer; font: inherit; font-weight: 900; min-height: 48px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
-      button:hover { box-shadow: 0 12px 24px rgba(12, 143, 91, .20); transform: translateY(-1px); }
-      button.secondary { background: #132820; }
-      button.secondary:hover { box-shadow: 0 12px 24px rgba(19, 40, 32, .18); }
-      button.danger { background: #b42318; }
-      button.danger:hover { box-shadow: 0 12px 24px rgba(180, 35, 24, .18); }
-      button:disabled { cursor: wait; opacity: .65; transform: none; }
+      label { color: #dce3eb; display: grid; gap: 7px; font-size: 13px; font-weight: 800; }
+      input, textarea { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; font-weight: 650; outline: 0; padding: 14px 15px; width: 100%; }
+      input:focus, textarea:focus { border-color: #5de49b; box-shadow: 0 0 0 4px rgba(93, 228, 155, .12); }
+      input:disabled { color: #9da6b3; }
+      button { background: #ffffff; border: 0; border-radius: 9px; color: #0d0f12; cursor: pointer; font: inherit; font-weight: 900; min-height: 46px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
+      button:hover { box-shadow: 0 14px 28px rgba(255, 255, 255, .10); transform: translateY(-1px); }
+      button.primary { background: #16a367; color: #fff; }
+      button.secondary { background: #2b3038; color: #f4f7fb; }
+      button.danger { background: #ef4444; color: #fff; }
+      button:disabled { cursor: not-allowed; opacity: .45; transform: none; }
       textarea { min-height: 96px; resize: vertical; }
-      .result { background: #f8faf6; border: 1px solid #dfe8dc; border-radius: 16px; display: none; gap: 14px; margin-top: 18px; padding: 18px; }
+      .result { background: #171a20; border: 1px solid #30343b; border-radius: 12px; display: none; gap: 14px; margin-top: 18px; padding: 18px; }
       .result.visible { display: grid; }
-      .result-title { color: #20362d; font-weight: 900; }
+      .result-title { color: #ffffff; font-weight: 900; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-      .status { background: #fff9ed; border: 1px solid #f2dec0; border-left: 5px solid #c47a16; border-radius: 12px; color: #6a4a19; margin: 0; padding: 13px 14px; }
-      .ok { background: #edf8f2; border-color: #ccebd8; border-left-color: #0b8f5a; color: #0b633f; }
-      .bad { background: #fff1f0; border-color: #ffd3cf; border-left-color: #b42318; color: #8d1f17; }
+      .status { background: #181b21; border: 1px solid #373d47; border-left: 5px solid #7c8798; border-radius: 10px; color: #c2cbd7; margin: 0; padding: 12px 13px; }
+      .ok { background: rgba(24, 166, 101, .12); border-color: rgba(93, 228, 155, .28); border-left-color: #5de49b; color: #bdf8d8; }
+      .bad { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .34); border-left-color: #ef4444; color: #ffc7c7; }
       .panel { margin-top: 24px; }
-      .panel .card { box-shadow: 0 14px 38px rgba(28, 45, 36, .07); }
       .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
-      .muted { color: #68756f; font-size: 14px; margin-top: 6px; }
-      @media (max-width: 860px) { body { padding: 18px; } .hero { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr; } }
-      @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } }
+      .muted { color: #8f98a3; font-size: 14px; margin-top: 6px; }
+      .fine { color: #7f8896; font-size: 12px; }
+      [hidden] { display: none !important; }
+      @media (max-width: 980px) { .shell { grid-template-columns: 1fr; } .sidebar { display: none; } .workspace { padding: 16px; } .hero { grid-template-columns: 1fr; } }
+      @media (max-width: 640px) { .grid2, .stats { grid-template-columns: 1fr; } .intro, .card { padding: 20px; } .topbar, .auth-row { align-items: stretch; flex-direction: column; } .auth-actions { width: 100%; } .auth-actions button { flex: 1; } }
     </style>
   </head>
   <body>
-    <main>
-      <section class="hero">
-        <div class="intro">
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="brand-mark">CL</div>
           <div>
-            <p class="eyebrow">Cricket Live Command</p>
-            <h1>Developer API access</h1>
-            <p>Generate a domain-locked API key for the embeddable live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
-          </div>
-          <div class="stats">
-            <div class="stat"><strong>OTP</strong><span>Email verified</span></div>
-            <div class="stat"><strong>Domain</strong><span>Origin locked</span></div>
-            <div class="stat"><strong>Live</strong><span>Score ready</span></div>
+            <div class="brand-title">Cricket Live</div>
+            <div class="brand-sub">Developer Console</div>
           </div>
         </div>
+        <nav class="nav">
+          <a class="nav-item active" href="#"><span class="nav-dot"></span> API keys</a>
+          <a class="nav-item" href="/api/system-status">System status</a>
+          <a class="nav-item" href="/api/v1/matches">Matches API</a>
+          <a class="nav-item" href="/api/developer/widget.js">Widget SDK</a>
+        </nav>
+        <div class="side-card">
+          <p class="fine">Free mode active</p>
+          <h2 style="margin-top: 4px;">Live scores API</h2>
+          <p class="muted">Google sign-in, OTP verification, domain locked widget keys.</p>
+        </div>
+      </aside>
 
-        <div class="card">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <div class="crumbs">Dashboard / API keys</div>
+          </div>
+          <div class="auth-actions">
+            <div id="userCard" class="user-card" hidden>
+              <img id="userPhoto" class="avatar" alt="" hidden />
+              <div id="userInitial" class="avatar placeholder">U</div>
+              <div>
+                <div id="userName" class="brand-title">Signed in</div>
+                <div id="userEmail" class="brand-sub"></div>
+              </div>
+            </div>
+            <button id="googleSignInBtn" type="button">Continue with Google</button>
+            <button id="signOutBtn" class="secondary" type="button" hidden>Sign out</button>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="hero">
+            <div class="intro">
+              <div>
+                <p class="eyebrow">Cricket Live Command</p>
+                <h1>Secure API access for live cricket data</h1>
+                <p>Create a domain-locked API key for the embeddable live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
+              </div>
+              <div class="stats">
+                <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
+                <div class="stat"><strong>OTP</strong><span>Email verified</span></div>
+                <div class="stat"><strong>Domain</strong><span>Origin locked</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="auth-panel">
+                <div class="auth-row">
+                  <div>
+                    <h2>Account access</h2>
+                    <p class="muted">Sign in first. The same Google email will be used for OTP and key ownership.</p>
+                  </div>
+                  <span class="badge">Firebase Auth</span>
+                </div>
+                <p id="portalStatus" class="status">Sign in with Google to unlock API key generation.</p>
+              </div>
+
           <div class="card-head">
             <div>
               <h2>Create API key</h2>
@@ -108,7 +181,7 @@ export class DeveloperController {
                 <input name="otp" inputmode="numeric" maxlength="6" placeholder="123456" required />
               </label>
             </div>
-            <button id="generateKeyBtn" type="submit">Generate API key</button>
+            <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
 
           <section id="result" class="result">
@@ -123,8 +196,8 @@ export class DeveloperController {
             <div class="result-title">Embed snippet</div>
             <textarea id="example" readonly></textarea>
           </section>
-        </div>
-      </section>
+            </div>
+          </section>
 
       <section class="panel">
         <div class="card">
@@ -157,17 +230,120 @@ export class DeveloperController {
           </form>
         </div>
       </section>
+        </div>
+      </section>
     </main>
 
-    <script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
+      import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDqmvvnLzaRTdlRRXlqxbWkCa1cludK4_s",
+        authDomain: "cricketapi-14e90.firebaseapp.com",
+        projectId: "cricketapi-14e90",
+        storageBucket: "cricketapi-14e90.firebasestorage.app",
+        messagingSenderId: "1021887715221",
+        appId: "1:1021887715221:web:c0e3da34a1c9877c6f089c",
+        measurementId: "G-H0DCN7VQWL"
+      };
+
+      const firebaseApp = initializeApp(firebaseConfig);
+      void isSupported().then((supported) => {
+        if (supported) getAnalytics(firebaseApp);
+      }).catch(() => {});
+
+      const auth = getAuth(firebaseApp);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
       const form = document.getElementById("keyForm");
       const revokeForm = document.getElementById("revokeForm");
       const result = document.getElementById("result");
       const apiKeyBox = document.getElementById("apiKey");
       const exampleBox = document.getElementById("example");
       const testStatus = document.getElementById("testStatus");
+      const portalStatus = document.getElementById("portalStatus");
       const quotaStatus = document.getElementById("quotaStatus");
+      const googleSignInBtn = document.getElementById("googleSignInBtn");
+      const signOutBtn = document.getElementById("signOutBtn");
+      const userCard = document.getElementById("userCard");
+      const userName = document.getElementById("userName");
+      const userEmail = document.getElementById("userEmail");
+      const userPhoto = document.getElementById("userPhoto");
+      const userInitial = document.getElementById("userInitial");
+      const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm button, #revokeForm input, #revokeForm button"));
+      const createEmailInput = form.elements.email;
+      const revokeEmailInput = revokeForm.elements.email;
       let currentKey = "";
+      let currentUser = null;
+
+      function setStatus(message, type) {
+        portalStatus.className = "status" + (type ? " " + type : "");
+        portalStatus.textContent = message;
+      }
+
+      function setFormsEnabled(enabled) {
+        gatedControls.forEach((control) => {
+          control.disabled = !enabled;
+        });
+      }
+
+      function syncSignedInUser(user) {
+        currentUser = user || null;
+        const signedIn = Boolean(user);
+        setFormsEnabled(signedIn);
+        googleSignInBtn.hidden = signedIn;
+        signOutBtn.hidden = !signedIn;
+        userCard.hidden = !signedIn;
+        if (!signedIn) {
+          createEmailInput.value = "";
+          revokeEmailInput.value = "";
+          createEmailInput.readOnly = false;
+          revokeEmailInput.readOnly = false;
+          result.classList.remove("visible");
+          setStatus("Sign in with Google to unlock API key generation.");
+          return;
+        }
+        const email = user.email || "";
+        const name = user.displayName || "Developer";
+        createEmailInput.value = email;
+        revokeEmailInput.value = email;
+        createEmailInput.readOnly = true;
+        revokeEmailInput.readOnly = true;
+        userName.textContent = name;
+        userEmail.textContent = email;
+        userInitial.textContent = (name || email || "U").trim().charAt(0).toUpperCase();
+        if (user.photoURL) {
+          userPhoto.src = user.photoURL;
+          userPhoto.hidden = false;
+          userInitial.hidden = true;
+        } else {
+          userPhoto.hidden = true;
+          userInitial.hidden = false;
+        }
+        setStatus("Signed in as " + email + ". Send OTP to continue.", "ok");
+      }
+
+      setFormsEnabled(false);
+      onAuthStateChanged(auth, syncSignedInUser);
+
+      googleSignInBtn.addEventListener("click", async () => {
+        googleSignInBtn.disabled = true;
+        setStatus("Opening Google sign-in...");
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (error) {
+          setStatus(error.message || "Google sign-in failed", "bad");
+        } finally {
+          googleSignInBtn.disabled = false;
+        }
+      });
+
+      signOutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+      });
 
       async function postJson(path, body) {
         const response = await fetch(path, {
@@ -181,18 +357,19 @@ export class DeveloperController {
       }
 
       document.getElementById("sendCreateOtpBtn").addEventListener("click", async () => {
+        if (!currentUser) {
+          setStatus("Please sign in with Google first.", "bad");
+          return;
+        }
         const button = document.getElementById("sendCreateOtpBtn");
         const formData = new FormData(form);
         button.disabled = true;
-        testStatus.className = "status";
-        testStatus.textContent = "Sending OTP...";
+        setStatus("Sending OTP...");
         try {
           const payload = await postJson("/api/developer/api-key-otp", { email: formData.get("email"), purpose: "create" });
-          testStatus.className = "status ok";
-          testStatus.textContent = payload.data.delivered ? "OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.";
+          setStatus(payload.data.delivered ? "OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.", "ok");
         } catch (error) {
-          testStatus.className = "status bad";
-          testStatus.textContent = error.message || "Could not send OTP";
+          setStatus(error.message || "Could not send OTP", "bad");
         } finally {
           button.disabled = false;
         }
@@ -200,6 +377,10 @@ export class DeveloperController {
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!currentUser) {
+          setStatus("Please sign in with Google first.", "bad");
+          return;
+        }
         const button = document.getElementById("generateKeyBtn");
         button.disabled = true;
         button.textContent = "Generating...";
@@ -220,9 +401,9 @@ export class DeveloperController {
           quotaStatus.className = "status ok";
           quotaStatus.textContent = "Copy it now. Limit: " + payload.data.monthlyQuota + " requests/month for this email. Allowed domain: " + (payload.data.allowedOrigins || []).join(", ") + ".";
           result.classList.add("visible");
+          setStatus("API key created successfully.", "ok");
         } catch (error) {
-          testStatus.className = "status bad";
-          testStatus.textContent = error.message || "Could not generate API key";
+          setStatus(error.message || "Could not generate API key", "bad");
         } finally {
           button.disabled = false;
           button.textContent = "Generate API key";
@@ -230,18 +411,19 @@ export class DeveloperController {
       });
 
       document.getElementById("sendRevokeOtpBtn").addEventListener("click", async () => {
+        if (!currentUser) {
+          setStatus("Please sign in with Google first.", "bad");
+          return;
+        }
         const button = document.getElementById("sendRevokeOtpBtn");
         const formData = new FormData(revokeForm);
         button.disabled = true;
-        testStatus.className = "status";
-        testStatus.textContent = "Sending revoke OTP...";
+        setStatus("Sending revoke OTP...");
         try {
           const payload = await postJson("/api/developer/api-key-otp", { email: formData.get("email"), purpose: "revoke" });
-          testStatus.className = "status ok";
-          testStatus.textContent = payload.data.delivered ? "Revoke OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.";
+          setStatus(payload.data.delivered ? "Revoke OTP sent to email." : payload.data.devCode ? "SMTP not configured. Dev OTP: " + payload.data.devCode : "OTP created, but SMTP is not configured on the server.", "ok");
         } catch (error) {
-          testStatus.className = "status bad";
-          testStatus.textContent = error.message || "Could not send OTP";
+          setStatus(error.message || "Could not send OTP", "bad");
         } finally {
           button.disabled = false;
         }
@@ -249,22 +431,23 @@ export class DeveloperController {
 
       revokeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!currentUser) {
+          setStatus("Please sign in with Google first.", "bad");
+          return;
+        }
         const button = revokeForm.querySelector("button.danger");
         const formData = new FormData(revokeForm);
         button.disabled = true;
-        testStatus.className = "status";
-        testStatus.textContent = "Revoking...";
+        setStatus("Revoking...");
         try {
           const payload = await postJson("/api/developer/api-keys/revoke", {
             email: formData.get("email"),
             otp: formData.get("otp"),
             keyPrefix: formData.get("keyPrefix")
           });
-          testStatus.className = "status ok";
-          testStatus.textContent = "Revoked " + payload.data.revoked + " active key(s).";
+          setStatus("Revoked " + payload.data.revoked + " active key(s).", "ok");
         } catch (error) {
-          testStatus.className = "status bad";
-          testStatus.textContent = error.message || "Could not revoke key";
+          setStatus(error.message || "Could not revoke key", "bad");
         } finally {
           button.disabled = false;
         }
