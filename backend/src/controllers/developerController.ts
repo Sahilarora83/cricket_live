@@ -9,6 +9,7 @@ export class DeveloperController {
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com; frame-src https://cricketapi-14e90.firebaseapp.com https://accounts.google.com"
     );
+    response.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     response.type("html").send(`<!doctype html>
 <html lang="en">
   <head>
