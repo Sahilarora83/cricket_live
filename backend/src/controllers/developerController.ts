@@ -23,45 +23,45 @@ export class DeveloperController {
       .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; position: relative; }
       .sidebar { background: #0f1115; border-right: 1px solid #24272e; padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; }
       .brand-row { align-items: center; display: flex; gap: 12px; padding: 0 10px; }
-      .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 10px; display: flex; font-weight: 950; height: 38px; justify-content: center; width: 38px; }
-      .brand-title { font-size: 16px; font-weight: 900; }
+      .brand-mark { align-items: center; background: linear-gradient(135deg, #14b66f, #2f80ed); border-radius: 10px; display: flex; font-weight: 700; height: 38px; justify-content: center; width: 38px; }
+      .brand-title { font-size: 16px; font-weight: 650; }
       .brand-sub { color: #8f98a3; font-size: 12px; margin-top: 2px; }
       .nav { display: grid; gap: 6px; }
-      .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; gap: 10px; padding: 11px 12px; text-decoration: none; }
+      .nav-item { align-items: center; border-radius: 10px; color: #b8c0cc; display: flex; font-weight: 450; gap: 10px; padding: 11px 12px; text-decoration: none; }
       .nav-item.active { background: #24272d; color: #ffffff; }
       .nav-dot { background: #5de49b; border-radius: 99px; height: 8px; width: 8px; }
       .side-card { border: 1px solid #2a2e36; border-radius: 14px; margin-top: auto; padding: 14px; background: #171a20; }
       .workspace { min-width: 0; padding: 22px; }
       .topbar { align-items: center; background: rgba(15, 17, 21, .86); border: 1px solid #24272e; border-radius: 16px; display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; position: sticky; top: 18px; z-index: 5; backdrop-filter: blur(16px); }
-      .crumbs { color: #9da6b3; font-size: 14px; font-weight: 700; }
+      .crumbs { color: #9da6b3; font-size: 14px; font-weight: 500; }
       .auth-actions { align-items: center; display: flex; gap: 10px; }
       .user-card { align-items: center; display: flex; gap: 10px; }
       .avatar { border-radius: 99px; border: 1px solid #3a404b; height: 34px; object-fit: cover; width: 34px; }
-      .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 900; justify-content: center; }
+      .avatar.placeholder { align-items: center; background: #252b35; display: flex; font-weight: 650; justify-content: center; }
       .content { margin: 28px auto 0; max-width: 1220px; }
-      .hero { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); gap: 18px; align-items: stretch; }
-      .intro, .card { background: #1f2125; border: 1px solid #30343b; border-radius: 12px; box-shadow: 0 28px 70px rgba(0, 0, 0, .28); }
-      .intro { padding: 30px; display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; overflow: hidden; position: relative; }
-      .eyebrow { color: #62d99f; font-size: 12px; font-weight: 900; letter-spacing: .16em; margin: 0 0 14px; text-transform: uppercase; }
-      h1 { font-size: clamp(2.2rem, 5vw, 4.2rem); line-height: 1.02; margin: 0 0 16px; max-width: 720px; }
-      h2 { font-size: 19px; margin: 0; }
+      .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .86fr); gap: 18px; align-items: start; }
+      .intro, .card { background: #202124; border: 1px solid #30343b; border-radius: 12px; box-shadow: 0 18px 44px rgba(0, 0, 0, .20); }
+      .intro { padding: 26px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
+      .eyebrow { color: #62d99f; font-size: 12px; font-weight: 600; letter-spacing: .08em; margin: 0 0 14px; text-transform: uppercase; }
+      h1 { font-size: clamp(2rem, 3vw, 2.35rem); font-weight: 600; line-height: 1.12; margin: 0 0 12px; max-width: 720px; }
+      h2 { font-size: 18px; font-weight: 600; margin: 0; }
       p { color: #aab3bf; line-height: 1.58; margin: 0; }
       code { background: #101318; border: 1px solid #30343b; border-radius: 6px; color: #e8edf2; padding: 2px 6px; }
-      .stats { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 34px; }
+      .stats { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 24px; }
       .stat { background: #171a20; border: 1px solid #30343b; border-radius: 10px; padding: 16px; }
-      .stat strong { display: block; font-size: 22px; margin-bottom: 3px; }
-      .stat span { color: #8f98a3; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      .stat strong { display: block; font-size: 18px; font-weight: 600; margin-bottom: 3px; }
+      .stat span { color: #8f98a3; font-size: 12px; font-weight: 500; text-transform: uppercase; }
       .card { padding: 24px; }
       .card-head { align-items: center; display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-      .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 800; padding: 8px 12px; white-space: nowrap; }
+      .badge { background: #111419; border: 1px solid #333942; border-radius: 999px; color: #d9fbe9; font-size: 12px; font-weight: 600; padding: 8px 12px; white-space: nowrap; }
       .auth-panel { border: 1px solid #30343b; border-radius: 12px; background: #171a20; display: grid; gap: 12px; margin-bottom: 16px; padding: 14px; }
       .auth-row { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
       form { display: grid; gap: 14px; }
-      label { color: #dce3eb; display: grid; gap: 7px; font-size: 13px; font-weight: 800; }
-      input, textarea { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; font-weight: 650; outline: 0; padding: 14px 15px; width: 100%; }
+      label { color: #dce3eb; display: grid; gap: 7px; font-size: 13px; font-weight: 550; }
+      input, textarea { background: #111419; border: 1px solid #363b45; border-radius: 9px; color: #f3f5f7; font: inherit; font-weight: 400; outline: 0; padding: 14px 15px; width: 100%; }
       input:focus, textarea:focus { border-color: #5de49b; box-shadow: 0 0 0 4px rgba(93, 228, 155, .12); }
       input:disabled { color: #9da6b3; }
-      button { background: #ffffff; border: 0; border-radius: 9px; color: #0d0f12; cursor: pointer; font: inherit; font-weight: 900; min-height: 46px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
+      button { background: #ffffff; border: 0; border-radius: 9px; color: #0d0f12; cursor: pointer; font: inherit; font-weight: 600; min-height: 44px; padding: 0 18px; transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
       button:hover { box-shadow: 0 14px 28px rgba(255, 255, 255, .10); transform: translateY(-1px); }
       button.primary { background: #16a367; color: #fff; }
       button.secondary { background: #2b3038; color: #f4f7fb; }
@@ -70,7 +70,7 @@ export class DeveloperController {
       textarea { min-height: 96px; resize: vertical; }
       .result { background: #171a20; border: 1px solid #30343b; border-radius: 12px; display: none; gap: 14px; margin-top: 18px; padding: 18px; }
       .result.visible { display: grid; }
-      .result-title { color: #ffffff; font-weight: 900; }
+      .result-title { color: #ffffff; font-weight: 600; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; }
       .status { background: #181b21; border: 1px solid #373d47; border-left: 5px solid #7c8798; border-radius: 10px; color: #c2cbd7; margin: 0; padding: 12px 13px; }
       .ok { background: rgba(24, 166, 101, .12); border-color: rgba(93, 228, 155, .28); border-left-color: #5de49b; color: #bdf8d8; }
@@ -131,8 +131,8 @@ export class DeveloperController {
             <div class="intro">
               <div>
                 <p class="eyebrow">Cricket Live Command</p>
-                <h1>Secure API access for live cricket data</h1>
-                <p>Create a domain-locked API key for the embeddable live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
+                <h1>API keys</h1>
+                <p>Create and manage domain-locked keys for the live score widget. Use the <code>x-api-key</code> header for direct API calls.</p>
               </div>
               <div class="stats">
                 <div class="stat"><strong>Google</strong><span>Sign-in gate</span></div>
