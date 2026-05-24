@@ -70,24 +70,47 @@ type PointsTeam = {
   teamImageId?: number;
 };
 
+type IplSeriesSnapshot = {
+  seriesId: number;
+  seriesName: string;
+  matches: Array<Record<string, unknown>>;
+  pointsTable: Array<Record<string, unknown>>;
+  squads: Array<Record<string, unknown>>;
+  assets: Array<Record<string, unknown>>;
+  scrapedAt: string | Date;
+};
+
 export class SeriesService {
-  async refreshIplSeries() {
-    const [matchesHtml, pointsHtml, squadsHtml] = await Promise.all([
+  async refreshIplSeries(): Promise<IplSeriesSnapshot> {
+    const previous = await this.getStoredSnapshot();
+    const [matchesResult, pointsResult, squadsResult] = await Promise.allSettled([
       fetchPage(`${SERIES_BASE}/matches`),
       fetchPage(`${SERIES_BASE}/points-table`),
       fetchPage(`${SERIES_BASE}/squads`)
     ]);
 
-    const matchesData = extractJsonAfterMarker<MatchDetailsData>(matchesHtml, "matchesData");
+    const matchesHtml = pageValue(matchesResult, "matches");
+    const pointsHtml = pageValue(pointsResult, "points-table");
+    const squadsHtml = pageValue(squadsResult, "squads");
+
+    if (!matchesHtml && !pointsHtml && !squadsHtml) {
+      if (previous) return previous;
+      throw new Error("IPL series scrape failed: Cricbuzz pages are unavailable");
+    }
+
+    const matchesData = extractJsonAfterMarker<MatchDetailsData>(matchesHtml ?? "", "matchesData");
     const matchesListFromSchedule = flattenSeriesMatches(matchesData);
     const matchesList = matchesListFromSchedule.length
       ? matchesListFromSchedule
-      : extractJsonAfterMarker<{ matches?: RawMatch[] }>(matchesHtml, "matchesList")?.matches ?? [];
-    const pointsData = extractJsonAfterMarker<{ pointsTable?: { pointsTableInfo?: PointsTeam[] }[] }>(pointsHtml, "pointsTableData");
+      : extractJsonAfterMarker<{ matches?: RawMatch[] }>(matchesHtml ?? "", "matchesList")?.matches ?? [];
+    const previousMatches = previous?.matches ?? [];
+    const effectiveMatchesList = matchesList;
+    const pointsData = extractJsonAfterMarker<{ pointsTable?: { pointsTableInfo?: PointsTeam[] }[] }>(pointsHtml ?? "", "pointsTableData");
     const pointRows = pointsData?.pointsTable?.flatMap((group) => group.pointsTableInfo ?? []) ?? [];
-    const teamLogoMap = buildTeamLogoMap(matchesList, pointRows);
+    const teamLogoMap = buildTeamLogoMap(effectiveMatchesList, pointRows);
 
-    const matches = matchesList
+    const matches = effectiveMatchesList.length
+      ? effectiveMatchesList
       .map((item) => item.match?.matchInfo)
       .filter((match): match is NonNullable<NonNullable<RawMatch["match"]>["matchInfo"]> => {
         if (!match) return false;
@@ -106,10 +129,12 @@ export class SeriesService {
         venue: [match.venueInfo?.ground, match.venueInfo?.city].filter(Boolean).join(", "),
         matchImageId: match.matchImageId,
         matchImageUrl: match.matchImageId ? imageUrl(match.matchImageId, "290x160") : undefined,
-        score: matchesList.find((item) => item.match?.matchInfo?.matchId === match.matchId)?.match?.matchScore
-      }));
+        score: effectiveMatchesList.find((item) => item.match?.matchInfo?.matchId === match.matchId)?.match?.matchScore
+      }))
+      : previousMatches;
 
-    const pointsTable = pointRows.map((row) => ({
+    const pointsTable = pointRows.length
+      ? pointRows.map((row) => ({
       teamId: row.teamId,
       teamName: row.teamFullName,
       shortName: row.teamName,
@@ -121,9 +146,11 @@ export class SeriesService {
       points: row.points,
       imageId: row.teamImageId ?? teamLogoMap.get(row.teamId)?.imageId,
       logoUrl: localAssetPath(row.teamImageId ?? teamLogoMap.get(row.teamId)?.imageId)
-    }));
+      }))
+      : previous?.pointsTable ?? [];
 
-    const squads = extractSquadTeams(squadsHtml).map((teamName) => {
+    const squadTeams = squadsHtml ? extractSquadTeams(squadsHtml) : [];
+    const squads = squadTeams.length ? squadTeams.map((teamName) => {
       const logo = Array.from(teamLogoMap.values()).find((team) => team.teamName === teamName);
       return {
         teamId: logo?.teamId,
@@ -131,11 +158,11 @@ export class SeriesService {
         shortName: logo?.teamSName,
         imageId: logo?.imageId,
         logoUrl: localAssetPath(logo?.imageId),
-        players: extractTaggedPlayersForTeam(squadsHtml, teamName)
+        players: extractTaggedPlayersForTeam(squadsHtml ?? "", teamName)
       };
-    });
+    }) : previous?.squads ?? [];
 
-    const photoIds = collectPhotoImageIds([matchesHtml, pointsHtml, squadsHtml], teamLogoMap);
+    const photoIds = collectPhotoImageIds([matchesHtml, pointsHtml, squadsHtml].filter((html): html is string => Boolean(html)), teamLogoMap);
     const assets = collectAssets(matches, pointsTable, squads, photoIds);
     const downloadedAssets = await downloadAssets(assets);
 
@@ -145,7 +172,7 @@ export class SeriesService {
       matches,
       pointsTable,
       squads,
-      assets: downloadedAssets,
+      assets: downloadedAssets.length ? downloadedAssets : previous?.assets ?? [],
       scrapedAt: new Date().toISOString()
     };
 
@@ -173,6 +200,17 @@ export class SeriesService {
 
     return this.refreshIplSeries();
   }
+
+  private async getStoredSnapshot(): Promise<IplSeriesSnapshot | null> {
+    const cached = await cache.get<IplSeriesSnapshot>(SERIES_CACHE_KEY);
+    if (cached) return cached;
+
+    if (canPersist()) {
+      return SeriesSnapshotModel.findOne({ seriesId: SERIES_ID }).lean<IplSeriesSnapshot>();
+    }
+
+    return null;
+  }
 }
 
 async function fetchPage(url: string) {
@@ -181,6 +219,20 @@ async function fetchPage(url: string) {
     timeout: 15000
   });
   return String(data);
+}
+
+function pageValue(result: PromiseSettledResult<string>, label: string) {
+  if (result.status === "fulfilled") return result.value;
+  console.warn(`IPL series ${label} page unavailable: ${errorSummary(result.reason)}`);
+  return null;
+}
+
+function errorSummary(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const code = error.code ?? (error.cause instanceof Error ? error.cause.message : "");
+    return [code, error.message].filter(Boolean).join(" ");
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 function extractJsonAfterMarker<T>(html: string, marker: string): T | null {
@@ -319,7 +371,7 @@ function extractTaggedPlayersForTeam(html: string, teamName: string) {
 }
 
 function collectAssets(
-  matches: Array<{ matchImageId?: number; team1: { imageId?: number }; team2: { imageId?: number } }>,
+  matches: Array<{ matchImageId?: number; team1?: { imageId?: number }; team2?: { imageId?: number } }>,
   pointsTable: Array<{ imageId?: number }>,
   squads: Array<{ imageId?: number }>,
   photoIds: number[]
@@ -327,7 +379,7 @@ function collectAssets(
   const assets = new Map<number, { imageId: number; type: "team-logo" | "match-photo" | "series-photo"; sourceUrl: string; localUrl: string }>();
 
   for (const match of matches) {
-    for (const imageId of [match.team1.imageId, match.team2.imageId]) {
+    for (const imageId of [match.team1?.imageId, match.team2?.imageId]) {
       if (imageId) assets.set(imageId, { imageId, type: "team-logo", sourceUrl: imageUrl(imageId, "152x152"), localUrl: localAssetPath(imageId) ?? "" });
     }
     if (match.matchImageId) {

@@ -18,14 +18,32 @@ import { getSystemStatus } from "./services/systemStatus.js";
 
 export function createApp(matchService: MatchService, scoreService: ScoreService, seriesService: SeriesService) {
   const app = express();
+  app.set("etag", false);
 
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" }
     })
   );
-  app.use(cors({ origin: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        const allowedOrigins = env.CORS_ORIGIN.split(",").map((item) => item.trim()).filter(Boolean);
+        callback(null, allowedOrigins.includes(origin));
+      }
+    })
+  );
   app.use(express.json());
+  app.use("/api", (_request, response, next) => {
+    response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    response.setHeader("Pragma", "no-cache");
+    response.setHeader("Expires", "0");
+    next();
+  });
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
   app.use("/assets", express.static(path.resolve(process.cwd(), "public", "assets")));
 

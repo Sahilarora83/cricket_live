@@ -121,7 +121,8 @@ export class CricbuzzProvider implements CricketProvider {
     const sourceScoreText = cleanText($(".cb-min-bat-rw, .cb-font-20, .cb-scrs-wrp, .cb-text-live").first().text());
     const scoreText = sourceScoreText && sourceScoreText.length < 220 ? sourceScoreText : match.rawText || pageText.slice(0, 300);
     const parsed = parseScore(scoreText) ?? parseScore(pageText);
-    const fallbackScore = parsed ? undefined : match.embeddedScore;
+    const fallbackScore = match.embeddedScore;
+    const mergedScore = mergeScoreText(fallbackScore?.score, parsed?.score, match);
     const sourceStatusText = cleanText($(".cb-text-live, .cb-text-complete, .cb-text-preview").first().text());
     const startStatus = inferStartStatus(pageText) ?? inferStartStatus(match.rawText ?? "");
     const statusText =
@@ -134,7 +135,7 @@ export class CricbuzzProvider implements CricketProvider {
     return {
       matchId: match.id,
       battingTeam: parsed?.battingTeam ?? fallbackScore?.battingTeam,
-      score: parsed?.score ?? fallbackScore?.score,
+      score: mergedScore || parsed?.score || fallbackScore?.score,
       runs: parsed?.runs ?? fallbackScore?.runs,
       wickets: parsed?.wickets ?? fallbackScore?.wickets,
       overs: parsed?.overs ?? fallbackScore?.overs,
@@ -263,7 +264,7 @@ function embeddedScoreToLiveScore(matchId: string, match: EmbeddedMatch): LiveSc
   if (innings.length === 0) return undefined;
 
   const latest = innings[innings.length - 1];
-  const overNumber = Number(latest.overs);
+  const completedOvers = oversToCompletedOvers(latest.overs);
   return {
     matchId,
     battingTeam: latest.team,
@@ -271,7 +272,7 @@ function embeddedScoreToLiveScore(matchId: string, match: EmbeddedMatch): LiveSc
     runs: latest.runs,
     wickets: latest.wickets,
     overs: String(latest.overs),
-    runRate: Number.isFinite(overNumber) && overNumber > 0 ? (latest.runs / overNumber).toFixed(2) : undefined,
+    runRate: completedOvers > 0 ? (latest.runs / completedOvers).toFixed(2) : undefined,
     statusText: match.matchInfo?.status ?? "Completed",
     batters: [],
     updatedAt: new Date().toISOString(),
@@ -290,7 +291,7 @@ function flattenInnings(score: unknown, info?: EmbeddedMatch["matchInfo"]) {
       if (!innings || typeof innings !== "object") continue;
       const row = innings as { runs?: number; wickets?: number; overs?: number | string };
       if (typeof row.runs === "number") {
-        rows.push({ team, runs: row.runs, wickets: row.wickets ?? 0, overs: row.overs ?? "" });
+        rows.push({ team, runs: row.runs, wickets: row.wickets ?? 0, overs: normalizeOversDisplay(row.overs ?? "") });
       }
     }
   }
@@ -432,12 +433,12 @@ function parseScore(text: string) {
   if (matches.length === 0) return null;
 
   const match = matches[matches.length - 1];
-  const inningsScores = Array.from(new Set(matches.map((item) => `${item[1]} ${item[2]}/${item[3]} (${item[4]})`)));
+  const inningsScores = Array.from(new Set(matches.map((item) => `${item[1]} ${item[2]}/${item[3]} (${normalizeOversDisplay(item[4])})`)));
   const runs = Number(match[2]);
   const wickets = Number(match[3]);
-  const overs = match[4];
-  const overNumber = Number(overs);
-  const runRate = Number.isFinite(overNumber) && overNumber > 0 ? (runs / overNumber).toFixed(2) : undefined;
+  const overs = normalizeOversDisplay(match[4]);
+  const completedOvers = oversToCompletedOvers(match[4]);
+  const runRate = completedOvers > 0 ? (runs / completedOvers).toFixed(2) : undefined;
 
   return {
     battingTeam: match[1],
@@ -447,6 +448,72 @@ function parseScore(text: string) {
     overs,
     runRate
   };
+}
+
+function mergeScoreText(baseScore: string | undefined, latestScore: string | undefined, match: CricketMatch) {
+  const rows = new Map<string, { score: string; overs: string }>();
+  const addRows = (scoreText?: string) => {
+    if (!scoreText) return;
+    for (const item of scoreText.matchAll(SCORE_RE)) {
+      rows.set(item[1], {
+        score: `${item[2]}/${item[3]}`,
+        overs: normalizeOversDisplay(item[4])
+      });
+    }
+  };
+
+  addRows(baseScore);
+  addRows(latestScore);
+
+  return [shortTeamName(match.team1), shortTeamName(match.team2)]
+    .map((team) => {
+      const row = rows.get(team);
+      return row ? `${team} ${row.score} (${row.overs})` : "";
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function shortTeamName(name: string) {
+  const map: Record<string, string> = {
+    "chennai super kings": "CSK",
+    "delhi capitals": "DC",
+    "gujarat titans": "GT",
+    "kolkata knight riders": "KKR",
+    "lucknow super giants": "LSG",
+    "mumbai indians": "MI",
+    "punjab kings": "PBKS",
+    "royal challengers bengaluru": "RCB",
+    "rajasthan royals": "RR",
+    "sunrisers hyderabad": "SRH"
+  };
+  const normalized = name.toLowerCase();
+  if (map[normalized]) return map[normalized];
+  const words = name.split(/\s+/).filter(Boolean);
+  return words.length > 2 ? words.map((word) => word[0]).join("").toUpperCase() : name.toUpperCase();
+}
+
+function normalizeOversDisplay(value: number | string) {
+  const raw = String(value);
+  const match = raw.match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) return raw;
+
+  const overs = Number(match[1]);
+  const balls = Number(match[2] ?? 0);
+  if (balls >= 6) {
+    return `${overs + Math.floor(balls / 6)}.${balls % 6}`;
+  }
+  return match[2] === undefined ? `${overs}` : `${overs}.${balls}`;
+}
+
+function oversToCompletedOvers(value: number | string) {
+  const raw = String(value);
+  const match = raw.match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) return 0;
+
+  const overs = Number(match[1]);
+  const balls = Number(match[2] ?? 0);
+  return overs + balls / 6;
 }
 
 function hasScore(text: string) {

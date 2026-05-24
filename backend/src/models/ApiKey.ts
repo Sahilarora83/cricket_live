@@ -6,6 +6,7 @@ const apiKeySchema = new mongoose.Schema(
     email: { type: String, required: true, index: true },
     keyPrefix: { type: String, required: true, unique: true, index: true },
     keyHash: { type: String, required: true, unique: true, index: true },
+    allowedOrigins: { type: [String], required: true, default: [] },
     plan: { type: String, required: true, default: "open-source" },
     monthlyQuota: { type: Number, required: true, default: 10000 },
     usageMonth: { type: String, required: true },
@@ -15,5 +16,8 @@ const apiKeySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+apiKeySchema.index({ email: 1, revoked: 1 });
+apiKeySchema.index({ email: 1, revoked: 1, usageMonth: 1 });
 
 export const ApiKeyModel = mongoose.model("ApiKey", apiKeySchema);

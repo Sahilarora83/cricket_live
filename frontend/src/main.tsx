@@ -141,7 +141,7 @@ function App() {
     }
 
     void Promise.all([api.score(activeMatch.id), api.commentary(activeMatch.id)]).then(([nextScore, nextCommentary]) => {
-      showScore(nextScore ?? activeMatch.embeddedScore ?? null);
+      showScore(nextScore ?? (activeMatch.status === "COMPLETED" ? activeMatch.embeddedScore ?? null : null));
       setCommentary(nextCommentary);
     });
 
@@ -149,6 +149,31 @@ function App() {
       socket.emit("leave_match", activeMatch.id);
     };
   }, [activeMatch?.id, showScore]);
+
+  React.useEffect(() => {
+    if (!activeMatch || activeMatch.status !== "LIVE") return;
+    let cancelled = false;
+    const matchId = activeMatch.id;
+
+    async function refreshLiveScore() {
+      try {
+        const nextScore = await api.score(matchId);
+        if (!cancelled && nextScore) {
+          showScore(nextScore);
+          setLastUpdate(new Date(nextScore.updatedAt).toLocaleTimeString());
+        }
+      } catch {
+        // Socket updates can still keep the screen alive if a single poll fails.
+      }
+    }
+
+    void refreshLiveScore();
+    const timer = window.setInterval(() => void refreshLiveScore(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeMatch?.id, activeMatch?.status, showScore]);
 
   React.useEffect(() => {
     socket.on("connect", () => setConnected(true));
@@ -191,14 +216,14 @@ function App() {
 
   async function selectMatch(match: CricketMatch) {
     setActiveMatch(match);
-    showScore(match.embeddedScore ?? null);
+    showScore(match.status === "COMPLETED" ? match.embeddedScore ?? null : null);
     setCommentary([]);
 
     if (match.status !== "COMPLETED" && (match.detailUrl || match.providerId)) {
       try {
         const tracked = await api.trackMatch(match.detailUrl ?? match.providerId);
         setActiveMatch(tracked);
-        showScore(tracked.embeddedScore ?? match.embeddedScore ?? null);
+        showScore(null);
       } catch {
         // Keep local selection if tracking a historical card fails.
       }
@@ -314,7 +339,9 @@ function ScorePanel({ match, score, pulseKey }: { match: CricketMatch | null; sc
   const hasPlayers = Boolean(score?.batters?.length || score?.bowler);
   const team1Logo = match ? teamLogo(match.team1) : null;
   const team2Logo = match ? teamLogo(match.team2) : null;
-  const teamScores = match ? splitTeamScores(score?.score, match) : {};
+  const baseScore = match?.status === "COMPLETED" ? match.embeddedScore?.score : undefined;
+  const scoreText = match ? mergeScoreText(baseScore, score?.score, match) : score?.score;
+  const teamScores = match ? splitTeamScores(scoreText, match) : {};
   const resultText = displayResultText(score, match);
 
   return (
@@ -592,7 +619,6 @@ function seriesCompletedMatches(seriesData: IplSeriesData | null): CricketMatch[
     .map((match) => {
       const score = seriesScoreToText(match.score, match.team1.shortName, match.team2.shortName);
       const latest = latestSeriesInnings(match.score);
-      const overNumber = Number(latest?.overs);
 
       return {
         id: `cricbuzz_${match.matchId}`,
@@ -613,8 +639,8 @@ function seriesCompletedMatches(seriesData: IplSeriesData | null): CricketMatch[
               score,
               runs: latest?.runs,
               wickets: latest?.wickets,
-              overs: latest?.overs ? String(latest.overs) : undefined,
-              runRate: latest && Number.isFinite(overNumber) && overNumber > 0 ? (latest.runs / overNumber).toFixed(2) : undefined,
+              overs: latest?.overs ? normalizeOversDisplay(latest.overs) : undefined,
+              runRate: latest ? runRateFromOvers(latest.runs, latest.overs) : undefined,
               statusText: match.status,
               batters: [],
               updatedAt: match.startTime,
@@ -648,7 +674,7 @@ function seriesTeamScoreRows(score: SeriesMatchScore["team1Score"] | undefined, 
       team,
       runs: innings.runs ?? 0,
       wickets: innings.wickets ?? 0,
-      overs: innings.overs ?? ""
+      overs: normalizeOversDisplay(innings.overs ?? "")
     }));
 }
 
@@ -670,16 +696,62 @@ function splitTeamScores(scoreText: string | undefined, match: CricketMatch) {
   const rows = Array.from(scoreText.matchAll(/([A-Z]{2,6})\s+(\d{1,3}\s*[-/]\s*\d{1,2})\s*\(([\d.]+)\)/g)).map((item) => ({
     team: item[1],
     score: item[2].replace(/\s+/g, ""),
-    overs: item[3]
+    overs: normalizeOversDisplay(item[3])
   }));
 
   const team1 = rows.find((row) => row.team === shortTeamName(match.team1));
   const team2 = rows.find((row) => row.team === shortTeamName(match.team2));
 
   return {
-    team1: team1 ? { score: team1.score, overs: team1.overs } : rows[0] ? { score: rows[0].score, overs: rows[0].overs } : undefined,
-    team2: team2 ? { score: team2.score, overs: team2.overs } : rows.length > 1 ? { score: rows[1].score, overs: rows[1].overs } : undefined
+    team1: team1 ? { score: team1.score, overs: team1.overs } : undefined,
+    team2: team2 ? { score: team2.score, overs: team2.overs } : undefined
   };
+}
+
+function mergeScoreText(baseScore: string | undefined, latestScore: string | undefined, match: CricketMatch) {
+  const rows = new Map<string, ParsedTeamScore>();
+  const pushRows = (scoreText?: string) => {
+    if (!scoreText) return;
+    for (const item of scoreText.matchAll(/([A-Z]{2,6})\s+(\d{1,3}\s*[-/]\s*\d{1,2})\s*\(([\d.]+)\)/g)) {
+      rows.set(item[1], {
+        score: item[2].replace(/\s+/g, ""),
+        overs: normalizeOversDisplay(item[3])
+      });
+    }
+  };
+
+  pushRows(baseScore);
+  pushRows(latestScore);
+
+  return [shortTeamName(match.team1), shortTeamName(match.team2)]
+    .map((team) => {
+      const row = rows.get(team);
+      return row ? `${team} ${row.score} (${row.overs ?? ""})` : "";
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function normalizeOversDisplay(value: number | string) {
+  const raw = String(value);
+  const match = raw.match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) return raw;
+
+  const overs = Number(match[1]);
+  const balls = Number(match[2] ?? 0);
+  if (balls >= 6) {
+    return `${overs + Math.floor(balls / 6)}.${balls % 6}`;
+  }
+  return match[2] === undefined ? `${overs}` : `${overs}.${balls}`;
+}
+
+function runRateFromOvers(runs: number | undefined, overs: number | string | undefined) {
+  if (typeof runs !== "number" || overs === undefined) return undefined;
+  const raw = String(overs);
+  const match = raw.match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) return undefined;
+  const completedOvers = Number(match[1]) + Number(match[2] ?? 0) / 6;
+  return completedOvers > 0 ? (runs / completedOvers).toFixed(2) : undefined;
 }
 
 function displayResultText(score: LiveScore | null, match: CricketMatch | null) {

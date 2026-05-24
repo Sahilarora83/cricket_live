@@ -33,9 +33,9 @@ server.listen(env.PORT, () => {
   console.log(`Cricket live backend running on http://localhost:${env.PORT}`);
   matchScheduler.start();
   scoreUpdater.start();
-  void seriesService.refreshIplSeries().catch((error) => console.error("Initial IPL series scrape failed", error));
+  void seriesService.refreshIplSeries().catch((error: unknown) => console.error("Initial IPL series scrape failed", error instanceof Error ? error.message : error));
   seriesTimer = setInterval(() => {
-    void seriesService.refreshIplSeries().catch((error) => console.error("Scheduled IPL series scrape failed", error));
+    void seriesService.refreshIplSeries().catch((error: unknown) => console.error("Scheduled IPL series scrape failed", error instanceof Error ? error.message : error));
   }, env.SERIES_SCRAPER_INTERVAL_MS);
 });
 

@@ -111,6 +111,13 @@ NODE_ENV=production
 PORT=10000
 MONGODB_URI=mongodb+srv://USER:PASSWORD@HOST/cricket_live?retryWrites=true&w=majority&appName=cricket-live
 CORS_ORIGIN=https://cricket-live-frontend.vercel.app
+REFRESH_SECRET=change_this_refresh_secret
+PUBLIC_RATE_LIMIT_WINDOW_MS=60000
+PUBLIC_RATE_LIMIT_MAX=120
+DEVELOPER_RATE_LIMIT_WINDOW_MS=60000
+DEVELOPER_RATE_LIMIT_MAX=10
+TRACK_MATCH_RATE_LIMIT_WINDOW_MS=60000
+TRACK_MATCH_RATE_LIMIT_MAX=20
 CRICKET_PROVIDER=cricbuzz
 CRICBUZZ_LIVE_URL=https://www.cricbuzz.com/cricket-match/live-scores
 CRICBUZZ_BASE_URL=https://www.cricbuzz.com
@@ -120,7 +127,17 @@ MATCH_SCHEDULER_INTERVAL_MS=60000
 SCORE_UPDATER_INTERVAL_MS=5000
 SERIES_SCRAPER_INTERVAL_MS=600000
 COMMENTARY_LIMIT=30
+API_REQUIRE_KEY=false
 API_FREE_MONTHLY_QUOTA=10000
+API_MAX_ACTIVE_KEYS_PER_EMAIL=1
+API_KEY_OTP_TTL_MINUTES=10
+API_KEY_OTP_RESEND_SECONDS=60
+API_KEY_OTP_MAX_ATTEMPTS=5
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=apikey@example.com
+SMTP_PASS=your_smtp_password
+SMTP_FROM="Cricket Live <apikey@example.com>"
 ```
 
 Optional backend variables:
@@ -190,12 +207,28 @@ Users can generate an API key and use the IPL feed in their own projects.
 Generate an API key:
 
 ```bash
+curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-key-otp \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"developer@example.com\",\"purpose\":\"create\"}"
+
 curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-keys \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"Demo App\",\"email\":\"developer@example.com\"}"
+  -d "{\"name\":\"Demo App\",\"email\":\"developer@example.com\",\"otp\":\"123456\",\"allowedOrigins\":[\"https://example.com\"]}"
 ```
 
-The full key is shown only once. Store it safely.
+The full key is shown only once. Store it safely. Key generation and revoke actions require an email OTP. Production keys should be registered to the website origin where the widget is embedded.
+
+Revoke leaked keys:
+
+```bash
+curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-key-otp \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"developer@example.com\",\"purpose\":\"revoke\"}"
+
+curl -X POST https://cricket-live-0we0.onrender.com/api/developer/api-keys/revoke \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"developer@example.com\",\"otp\":\"123456\"}"
+```
 
 Use the key:
 
@@ -219,7 +252,8 @@ Each generated key starts on the open-source plan:
 
 ```text
 Plan: open-source
-Monthly quota: 10,000 requests
+Monthly quota: 10,000 requests per email
+Active key limit: 1 key per email
 Auth header: x-api-key
 ```
 
@@ -230,6 +264,7 @@ x-api-plan
 x-api-quota-limit
 x-api-quota-used
 x-api-quota-remaining
+x-api-key-usage-used
 ```
 
 ## Website Widget
@@ -237,8 +272,9 @@ x-api-quota-remaining
 Developers can embed the live IPL score widget on any website.
 
 ```html
-<div id="cricket-live-widget"></div>
+<div id="cricket-live-widget">Loading live cricket scores...</div>
 <script
+  async
   src="https://cricket-live-0we0.onrender.com/api/developer/widget.js"
   data-api-key="cricket_live_your_key_here"
   data-target="cricket-live-widget"
@@ -249,9 +285,10 @@ Developers can embed the live IPL score widget on any website.
 The widget:
 
 - Fetches the active IPL match automatically
-- Updates on the configured interval
+- Updates on the configured interval, with a 30-second minimum
 - Shows team logos, scores, and result/status text
 - Uses the same monthly quota as the developer API key
+- Uses Shadow DOM isolation and lazy-loads when visible
 
 ## Socket.IO Events
 
