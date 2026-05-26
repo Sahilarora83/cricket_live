@@ -25,6 +25,9 @@ const schema = z.object({
   MATCH_SCHEDULER_INTERVAL_MS: z.coerce.number().default(60000),
   SCORE_UPDATER_INTERVAL_MS: z.coerce.number().default(5000),
   SERIES_SCRAPER_INTERVAL_MS: z.coerce.number().default(600000),
+  KEEP_ALIVE_URL: z.string().url().optional(),
+  KEEP_ALIVE_INTERVAL_MS: z.coerce.number().int().min(60000).default(600000),
+  KEEP_ALIVE_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).default(10000),
   COMMENTARY_LIMIT: z.coerce.number().default(30),
   API_REQUIRE_KEY: z
     .string()
