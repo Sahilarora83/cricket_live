@@ -1,4 +1,5 @@
 import { ApiKeyModel } from "../models/ApiKey.js";
+import { ApiRequestLogModel } from "../models/ApiRequestLog.js";
 import { ApiKeyOtpModel } from "../models/ApiKeyOtp.js";
 import { env } from "../config/env.js";
 import { canPersist } from "../utils/persistence.js";
@@ -16,6 +17,36 @@ export class ApiKeyServiceError extends Error {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function normalizeAllowedOrigins(value: unknown) {
+  const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,\n]/) : [];
+  const origins = values
+    .map((item) => String(item).trim().toLowerCase())
+    .filter(Boolean)
+    .map((item) => item.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+    .filter((item) => item === "localhost" || /^[a-z0-9.-]+(?::\d+)?$/.test(item));
+  return Array.from(new Set(origins)).slice(0, 10);
+}
+
+function originHost(value?: string) {
+  if (!value) return "";
+  try {
+    return new URL(value).host.toLowerCase();
+  } catch {
+    return value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  }
+}
+
+function originAllowed(requestOrigin: string, allowedOrigins: string[], trustedInternalOrigin?: boolean) {
+  if (allowedOrigins.length === 0) return true;
+  if (trustedInternalOrigin) return true;
+  const host = originHost(requestOrigin);
+  if (!host) return false;
+  return allowedOrigins.some((allowedOrigin) => {
+    const allowed = allowedOrigin.toLowerCase();
+    return host === allowed || host.endsWith(`.${allowed}`);
+  });
 }
 
 export class ApiKeyService {
@@ -55,15 +86,19 @@ export class ApiKeyService {
     };
   }
 
-  async createApiKey(input: { name: string; email: string; otp?: string; verifiedByGoogle?: boolean }) {
+  async createApiKey(input: { name: string; email: string; allowedOrigins?: unknown; otp?: string; verifiedByGoogle?: boolean }) {
     if (!canPersist()) {
       throw new ApiKeyServiceError("MongoDB is required to generate API keys", 503);
     }
 
     const name = input.name.trim();
     const email = normalizeEmail(input.email);
+    const allowedOrigins = normalizeAllowedOrigins(input.allowedOrigins);
     if (!name) {
       throw new ApiKeyServiceError("App name is required", 400);
+    }
+    if (allowedOrigins.length === 0) {
+      throw new ApiKeyServiceError("At least one allowed domain is required", 400);
     }
     if (!input.verifiedByGoogle) {
       await this.verifyOtp(email, input.otp || "", "create");
@@ -84,7 +119,7 @@ export class ApiKeyService {
       email,
       keyPrefix,
       keyHash: hashApiKey(key),
-      allowedOrigins: [],
+      allowedOrigins,
       plan: "open-source",
       monthlyQuota: env.API_FREE_MONTHLY_QUOTA,
       usageMonth: currentUsageMonth(),
@@ -94,7 +129,7 @@ export class ApiKeyService {
     return {
       key,
       keyPrefix: record.keyPrefix,
-      allowedOrigins: [],
+      allowedOrigins: record.allowedOrigins,
       plan: record.plan,
       monthlyQuota: record.monthlyQuota,
       maxActiveKeysPerEmail: env.API_MAX_ACTIVE_KEYS_PER_EMAIL,
@@ -138,6 +173,10 @@ export class ApiKeyService {
       .sort({ revoked: 1, createdAt: -1 })
       .limit(20)
       .lean();
+    const recentLogs = await ApiRequestLogModel.find({ email })
+      .sort({ createdAt: -1 })
+      .limit(25)
+      .lean();
     const activeKeys = keys.filter((key) => !key.revoked);
     const emailUsageCount = activeKeys
       .filter((key) => key.usageMonth === usageMonth)
@@ -165,6 +204,7 @@ export class ApiKeyService {
         name: key.name,
         email: key.email,
         keyPrefix: key.keyPrefix,
+        allowedOrigins: key.allowedOrigins || [],
         plan: key.plan,
         monthlyQuota: key.monthlyQuota,
         usageMonth: key.usageMonth,
@@ -174,11 +214,20 @@ export class ApiKeyService {
         createdAt: key.createdAt,
         revokedAt: key.revokedAt,
         lastUsedAt: key.lastUsedAt
+      })),
+      recentLogs: recentLogs.map((log) => ({
+        keyPrefix: log.keyPrefix,
+        method: log.method,
+        path: log.path,
+        origin: log.origin || "",
+        status: log.status,
+        message: log.message || "",
+        createdAt: log.createdAt
       }))
     };
   }
 
-  async consumeApiKey(rawKey: string) {
+  async consumeApiKey(rawKey: string, requestMeta?: { method?: string; path?: string; origin?: string; trustedInternalOrigin?: boolean }) {
     if (!canPersist()) {
       return { ok: false as const, status: 503, error: "API key storage is unavailable" };
     }
@@ -187,6 +236,19 @@ export class ApiKeyService {
     const apiKey = await ApiKeyModel.findOne({ keyHash, revoked: false });
     if (!apiKey) {
       return { ok: false as const, status: 401, error: "Invalid API key" };
+    }
+
+    if (!originAllowed(requestMeta?.origin || "", apiKey.allowedOrigins || [], requestMeta?.trustedInternalOrigin)) {
+      await this.logApiRequest({
+        email: apiKey.email,
+        keyPrefix: apiKey.keyPrefix,
+        method: requestMeta?.method || "GET",
+        path: requestMeta?.path || "",
+        origin: requestMeta?.origin,
+        status: 403,
+        message: "Origin not allowed"
+      });
+      return { ok: false as const, status: 403, error: "This API key is not allowed from this domain" };
     }
 
     const usageMonth = currentUsageMonth();
@@ -220,6 +282,15 @@ export class ApiKeyService {
     apiKey.lastUsedAt = new Date();
     await apiKey.save();
     const updatedEmailUsageCount = emailUsageCount + 1;
+    await this.logApiRequest({
+      email: apiKey.email,
+      keyPrefix: apiKey.keyPrefix,
+      method: requestMeta?.method || "GET",
+      path: requestMeta?.path || "",
+      origin: requestMeta?.origin,
+      status: 200,
+      message: "OK"
+    });
 
     return {
       ok: true as const,
@@ -233,6 +304,14 @@ export class ApiKeyService {
         remaining: Math.max(apiKey.monthlyQuota - updatedEmailUsageCount, 0)
       }
     };
+  }
+
+  private async logApiRequest(input: { email: string; keyPrefix: string; method: string; path: string; origin?: string; status: number; message?: string }) {
+    try {
+      await ApiRequestLogModel.create(input);
+    } catch {
+      // Request logging must never break API access.
+    }
   }
 
   private async assertCreateAllowed(email: string) {

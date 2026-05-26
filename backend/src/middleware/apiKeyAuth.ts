@@ -38,7 +38,13 @@ export function createApiKeyAuth(apiKeyService: ApiKeyService) {
       return;
     }
 
-    const result = await apiKeyService.consumeApiKey(apiKey);
+    const requestOrigin = request.header("origin") || request.header("referer") || "";
+    const result = await apiKeyService.consumeApiKey(apiKey, {
+      method: request.method,
+      path: request.originalUrl,
+      origin: requestOrigin,
+      trustedInternalOrigin: isSameHost(requestOrigin, request.get("host") || "")
+    });
     if (!result.ok) {
       response.status(result.status).json({ error: result.error });
       return;
@@ -51,6 +57,15 @@ export function createApiKeyAuth(apiKeyService: ApiKeyService) {
     response.setHeader("x-api-key-usage-used", String(result.usage.usageCount));
     next();
   };
+}
+
+function isSameHost(origin: string, host: string) {
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 function consumeApiKeyRateLimit(apiKey: string) {

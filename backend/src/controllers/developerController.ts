@@ -269,6 +269,9 @@ export class DeveloperController {
       .content > .page:not(.active-page) { display: none !important; }
       .content > .page.active-page { display: block !important; }
       .content > .page.hero.active-page { display: grid !important; }
+      body:not(.signed-in) .content > .page:not(#overview) { display: none !important; }
+      body:not(.signed-in) .auth-required { opacity: .45; pointer-events: none; }
+      body:not(.signed-in) .nav-item:not([data-nav="overview"]) { opacity: .46; }
       .workspace { padding-top: 16px; }
       .topbar { margin: 0 auto; max-width: 1120px; width: 100%; }
       .content { max-width: 1120px; }
@@ -467,6 +470,11 @@ export class DeveloperController {
               Email
               <input name="email" type="email" placeholder="developer@example.com" required />
             </label>
+            <label>
+              Allowed domains
+              <textarea name="allowedOrigins" placeholder="example.com&#10;localhost:5173" required></textarea>
+              <span class="fine">One domain per line. Browser widget/API calls will be accepted only from these domains.</span>
+            </label>
             <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
           <div class="skeleton-only" hidden>
@@ -574,9 +582,8 @@ export class DeveloperController {
       <section id="logs" class="page">
         <div class="card">
           <div class="card-head"><div><h2>Request logs</h2><p class="muted">Terminal-inspired request history. Live logs will appear here as traffic comes in.</p></div><span class="badge">Logs</span></div>
-          <div class="activity-list">
-            <div class="activity-item"><span class="activity-dot"></span><div><code>GET /api/v1/live-match</code><div class="fine">200 OK · low latency · waiting for authenticated traffic</div></div></div>
-            <div class="activity-item"><span class="activity-dot"></span><div><code>GET /api/v1/matches</code><div class="fine">Cached response available</div></div></div>
+          <div id="requestLogs" class="activity-list">
+            <div class="empty-state">Sign in to load request logs.</div>
           </div>
         </div>
       </section>
@@ -748,7 +755,8 @@ export class DeveloperController {
       const portalSearch = document.getElementById("portalSearch");
       const themeToggle = document.getElementById("themeToggle");
       const crumbs = document.getElementById("crumbs");
-      const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm button, #revokeForm input, #revokeForm button"));
+      const requestLogs = document.getElementById("requestLogs");
+      const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm textarea, #keyForm button, #revokeForm input, #revokeForm button"));
       const createEmailInput = form.elements.email;
       const revokeEmailInput = revokeForm.elements.email;
       let currentKey = "";
@@ -814,7 +822,7 @@ export class DeveloperController {
             const action = key.revoked ? '<span class="fine">Archived</span>' : '<button class="secondary tiny" type="button" data-copy-prefix="' + escapeHtml(key.keyPrefix) + '">Copy</button><button class="danger tiny" type="button" data-delete-key="' + escapeHtml(key.keyPrefix) + '">Revoke</button>';
             return '<div class="key-card" data-key-card data-search="' + escapeHtml((key.name || "") + " " + (key.keyPrefix || "")) + '">' +
               '<div class="key-card-top">' +
-                '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div></div>' +
+                '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div><div class="fine">Domains: ' + escapeHtml((key.allowedOrigins || []).join(", ") || "unrestricted legacy key") + '</div></div>' +
                 '<span class="pill ' + statusClass + '">' + statusText + '</span>' +
               '</div>' +
               '<div><div class="fine">Usage ' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div><div class="progress"><div style="width:' + percent + '%"></div></div></div>' +
@@ -825,6 +833,16 @@ export class DeveloperController {
               '<div class="key-actions">' + action + '<button class="secondary tiny" type="button" data-nav="docs">View docs</button></div>' +
             '</div>';
           }).join("") : '<div class="empty-state">No API keys yet. Generate your first key from the dashboard card.</div>';
+
+        const logs = Array.isArray(data.recentLogs) ? data.recentLogs : [];
+        requestLogs.innerHTML = logs.length ? logs.map((log) => {
+          const ok = Number(log.status) < 400;
+          return '<div class="activity-item">' +
+            '<span class="activity-dot" style="background:' + (ok ? '#22c55e' : '#ef4444') + '"></span>' +
+            '<div><code>' + escapeHtml(log.method) + ' ' + escapeHtml(log.path) + '</code>' +
+            '<div class="fine">' + escapeHtml(log.status + " " + (log.message || "")) + ' · ' + escapeHtml(log.origin || "no origin") + ' · ' + escapeHtml(formatDate(log.createdAt)) + '</div></div>' +
+          '</div>';
+        }).join("") : '<div class="empty-state">No API key traffic yet. Test a key from the playground or widget.</div>';
       }
 
       function resetUsage() {
@@ -838,6 +856,7 @@ export class DeveloperController {
         usageMeter.style.width = "0%";
         usageUpdatedAt.textContent = "Waiting";
         keysTable.innerHTML = '<div class="empty-state">Sign in to load API keys.</div>';
+        requestLogs.innerHTML = '<div class="empty-state">Sign in to load request logs.</div>';
       }
 
       function syncSignedInUser(user) {
@@ -845,6 +864,7 @@ export class DeveloperController {
         document.body.classList.add("auth-ready");
         currentUser = user || null;
         const signedIn = Boolean(user);
+        document.body.classList.toggle("signed-in", signedIn);
         setFormsEnabled(signedIn);
         googleSignInBtn.hidden = signedIn;
         signOutBtn.hidden = !signedIn;
@@ -855,6 +875,9 @@ export class DeveloperController {
           createEmailInput.readOnly = false;
           revokeEmailInput.readOnly = false;
           result.classList.remove("visible");
+          if (currentSectionFromHash() !== "overview") {
+            location.hash = "overview";
+          }
           clearInterval(usageTimer);
           usageTimer = 0;
           resetUsage();
@@ -905,6 +928,11 @@ export class DeveloperController {
 
       function showCurrentSection() {
         const id = currentSectionFromHash();
+        if (!currentUser && id !== "overview") {
+          location.hash = "overview";
+          setStatus("Sign in with Google to unlock this section.", "bad");
+          return;
+        }
         setActiveNav(id);
         document.querySelectorAll(".page").forEach((section) => {
           section.classList.toggle("active-page", section.id === id);
@@ -1037,6 +1065,7 @@ export class DeveloperController {
           const payload = await postJson("/api/developer/api-keys", {
             name: formData.get("name"),
             email: formData.get("email"),
+            allowedOrigins: formData.get("allowedOrigins"),
             firebaseIdToken
           });
 
@@ -1379,6 +1408,7 @@ export class DeveloperController {
   createApiKey = async (request: Request, response: Response) => {
     const name = typeof request.body?.name === "string" ? request.body.name : "";
     const email = typeof request.body?.email === "string" ? request.body.email : "";
+    const allowedOrigins = request.body?.allowedOrigins;
     const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
     if (!name.trim() || !email.trim() || !firebaseIdToken.trim()) {
       response.status(400).json({ error: "Name, email and Google sign-in are required" });
@@ -1392,7 +1422,7 @@ export class DeveloperController {
         response.status(403).json({ error: "Google account email does not match the submitted email" });
         return;
       }
-      result = await this.apiKeyService.createApiKey({ name, email, verifiedByGoogle: true });
+      result = await this.apiKeyService.createApiKey({ name, email, allowedOrigins, verifiedByGoogle: true });
     } catch (error) {
       this.sendApiKeyError(response, error, "API key generation is unavailable");
       return;
