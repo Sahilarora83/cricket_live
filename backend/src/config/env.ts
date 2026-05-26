@@ -8,6 +8,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  RENDER_EXTERNAL_URL: z.string().url().optional(),
   REFRESH_SECRET: z.string().optional(),
   PUBLIC_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60000),
   PUBLIC_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(120),

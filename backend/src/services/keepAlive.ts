@@ -1,7 +1,9 @@
 import { env } from "../config/env.js";
 
 export function startKeepAlive() {
-  if (!env.KEEP_ALIVE_URL) {
+  const keepAliveUrl = env.KEEP_ALIVE_URL ?? (env.RENDER_EXTERNAL_URL ? `${env.RENDER_EXTERNAL_URL.replace(/\/$/, "")}/health` : undefined);
+
+  if (!keepAliveUrl) {
     return undefined;
   }
 
@@ -10,7 +12,7 @@ export function startKeepAlive() {
     const timeout = setTimeout(() => controller.abort(), env.KEEP_ALIVE_REQUEST_TIMEOUT_MS);
 
     try {
-      const response = await fetch(env.KEEP_ALIVE_URL!, {
+      const response = await fetch(keepAliveUrl, {
         method: "GET",
         cache: "no-store",
         signal: controller.signal
@@ -27,7 +29,7 @@ export function startKeepAlive() {
     }
   };
 
-  console.log(`Keep-alive enabled: ${env.KEEP_ALIVE_URL}`);
+  console.log(`Keep-alive enabled: ${keepAliveUrl}`);
   void ping();
 
   const timer = setInterval(() => {
