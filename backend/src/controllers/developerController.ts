@@ -503,7 +503,10 @@ export class DeveloperController {
             <div class="result-title">Domain verification</div>
             <div class="copy-row">
               <textarea id="verificationBox" readonly></textarea>
-              <button id="copyVerificationBtn" type="button" class="secondary">Copy</button>
+              <div class="key-actions">
+                <button id="copyVerificationBtn" type="button" class="secondary">Copy</button>
+                <button id="downloadVerificationBtn" type="button" class="secondary">Download file</button>
+              </div>
             </div>
             <p class="status">Upload this content at <code>/cricket-live-verify.txt</code> on your website, then wait for admin approval.</p>
             <div class="actions">
@@ -891,7 +894,7 @@ export class DeveloperController {
                 '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div><div class="fine">Requested: ' + escapeHtml((key.requestedDomains || []).join(", ") || "--") + '</div><div class="fine">Approved: ' + escapeHtml((key.approvedDomains || []).join(", ") || "--") + '</div></div>' +
                 '<span class="pill ' + (approval === "approved" ? "active" : approval === "rejected" ? "revoked" : "") + '">' + statusText + '</span>' +
               '</div>' +
-              (approval === "pending" ? '<div class="status">Upload <code>/cricket-live-verify.txt</code> with:<br><code>' + escapeHtml(key.verificationToken || "") + '</code><br>Admin approval is required before this key can call the API.</div>' : '') +
+              (approval === "pending" ? '<div class="status">Upload <code>/cricket-live-verify.txt</code> with:<br><code>' + escapeHtml(key.verificationToken || "") + '</code><br>Admin approval is required before this key can call the API.</div><button class="secondary tiny" type="button" data-download-verification="' + escapeHtml(key.verificationToken || "") + '">Download verification file</button>' : '') +
               (approval === "rejected" ? '<div class="status bad">' + escapeHtml(key.rejectionReason || "Rejected by administrator") + '</div>' : '') +
               '<div><div class="fine">Usage ' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div><div class="progress"><div style="width:' + percent + '%"></div></div></div>' +
               '<div class="key-card-meta">' +
@@ -1142,6 +1145,12 @@ export class DeveloperController {
           setStatus("Key prefix copied.", "ok");
           return;
         }
+        const verificationButton = event.target.closest("[data-download-verification]");
+        if (verificationButton) {
+          downloadVerificationFile(verificationButton.getAttribute("data-download-verification") || "");
+          setStatus("Verification file downloaded. Upload it to your website root.", "ok");
+          return;
+        }
         const button = event.target.closest("[data-delete-key]");
         if (!button) return;
         button.disabled = true;
@@ -1244,6 +1253,26 @@ export class DeveloperController {
       document.getElementById("copyVerificationBtn").addEventListener("click", async () => {
         await navigator.clipboard.writeText(verificationBox.value);
         setStatus("Verification token copied.", "ok");
+      });
+
+      function downloadVerificationFile(content) {
+        if (!content.trim()) {
+          setStatus("Generate a key first.", "bad");
+          return;
+        }
+        const blob = new Blob([content.trim() + "\\n"], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "cricket-live-verify.txt";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById("downloadVerificationBtn").addEventListener("click", () => {
+        downloadVerificationFile(verificationBox.value);
       });
 
       document.getElementById("testBtn").addEventListener("click", async () => {
