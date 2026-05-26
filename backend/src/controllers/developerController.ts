@@ -72,44 +72,61 @@ export class DeveloperController {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cricket Live Admin</title>
     <style>
-      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --bg:#0b0f16; --panel:#111722; --panel2:#151c29; --line:#263044; --text:#f6f8fb; --muted:#94a3b8; --green:#25d695; --blue:#6ea8fe; --violet:#a78bfa; --red:#ff6b6b; --amber:#fbbf24; }
       * { box-sizing: border-box; }
-      body { background: #0f0f0f; color: #f5f5f5; margin: 0; }
+      body { background: radial-gradient(circle at 18% -10%, rgba(94, 234, 212, .16), transparent 28%), radial-gradient(circle at 86% 10%, rgba(167, 139, 250, .16), transparent 24%), var(--bg); color: var(--text); margin: 0; }
       button, input, textarea, select { font: inherit; }
-      .wrap { margin: 0 auto; max-width: 1240px; padding: 28px; }
-      .top { align-items: center; border-bottom: 1px solid #2b2b2b; display: flex; gap: 16px; justify-content: space-between; padding-bottom: 18px; }
-      h1 { font-size: 28px; font-weight: 560; margin: 0; }
+      .wrap { margin: 0 auto; max-width: 1480px; padding: 26px; }
+      .top { align-items: center; background: rgba(17,23,34,.72); border: 1px solid rgba(255,255,255,.08); border-radius: 24px; display: flex; gap: 16px; justify-content: space-between; padding: 20px 22px; position: sticky; top: 14px; z-index: 4; backdrop-filter: blur(18px); }
+      .brandline { align-items:center; display:flex; gap:14px; }
+      .logo { align-items:center; background: linear-gradient(135deg, var(--green), var(--blue)); border-radius: 18px; color:#071015; display:flex; font-weight:800; height:48px; justify-content:center; width:48px; }
+      h1 { font-size: 30px; font-weight: 650; letter-spacing: 0; margin: 0; }
       h2 { font-size: 18px; margin: 0; }
-      p { color: #a3a3a3; line-height: 1.55; margin: 6px 0 0; }
-      .card { background: #181818; border: 1px solid #303030; border-radius: 14px; padding: 18px; }
-      .grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0; }
-      .layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 360px; }
-      .stack { display: grid; gap: 12px; }
-      .stat span, .fine { color: #a3a3a3; font-size: 12px; }
-      .stat strong { display: block; font-size: 26px; margin-top: 6px; }
-      input { background: #101010; border: 1px solid #363636; border-radius: 10px; color: #fff; padding: 13px 14px; width: 100%; }
-      button { background: #f5f5f5; border: 0; border-radius: 10px; color: #111; cursor: pointer; font-weight: 560; min-height: 42px; padding: 0 14px; }
-      button.secondary { background: #2b2b2b; border: 1px solid #3a3a3a; color: #fff; }
-      button.danger { background: #4a1f1f; border: 1px solid #7a3333; color: #ffd7d7; }
-      .row { align-items: start; border: 1px solid #303030; border-radius: 12px; display: grid; gap: 12px; grid-template-columns: 1.2fr .9fr .6fr auto; padding: 14px; }
-      .pill { border: 1px solid #444; border-radius: 999px; display: inline-flex; font-size: 12px; padding: 5px 9px; width: fit-content; }
-      .approved { border-color: #10a37f; color: #b5f4df; }
-      .pending { border-color: #8a6d2f; color: #ffe7a3; }
-      .rejected, .blocked { border-color: #7a3333; color: #ffd7d7; }
-      .logs { max-height: 480px; overflow: auto; }
-      .log { border-bottom: 1px solid #2b2b2b; padding: 10px 0; }
+      p { color: var(--muted); line-height: 1.55; margin: 6px 0 0; }
+      .card { background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.09); border-radius: 24px; box-shadow: 0 24px 70px rgba(0,0,0,.26); padding: 20px; }
+      .grid { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 22px 0; }
+      .layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 390px; }
+      .stack { display: grid; gap: 14px; }
+      .stat { min-height: 150px; overflow:hidden; position:relative; }
+      .stat:after { background: radial-gradient(circle, rgba(255,255,255,.16), transparent 62%); content:""; height:130px; position:absolute; right:-45px; top:-45px; width:130px; }
+      .stat span, .fine { color: var(--muted); font-size: 12px; }
+      .stat strong { display: block; font-size: 36px; margin-top: 10px; }
+      .stat small { color: #cbd5e1; display:block; margin-top:16px; }
+      input { background: rgba(10,14,21,.78); border: 1px solid var(--line); border-radius: 14px; color: #fff; padding: 13px 14px; width: 100%; }
+      button { background: #f6f8fb; border: 0; border-radius: 13px; color: #0d1320; cursor: pointer; font-weight: 650; min-height: 42px; padding: 0 14px; }
+      button.secondary { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); color: #fff; }
+      button.danger { background: rgba(255,107,107,.16); border: 1px solid rgba(255,107,107,.35); color: #ffd7d7; }
+      .toolbar { align-items:center; display:flex; gap:10px; justify-content:space-between; margin-top:16px; }
+      .filters { display:flex; flex-wrap:wrap; gap:8px; }
+      .filter { background: rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.09); color:#dbeafe; }
+      .filter.active { background: rgba(110,168,254,.20); border-color: rgba(110,168,254,.45); }
+      .row { align-items: start; background: rgba(12,17,26,.58); border: 1px solid rgba(255,255,255,.075); border-radius: 20px; display: grid; gap: 14px; grid-template-columns: 1.1fr .86fr .62fr auto; padding: 16px; }
+      .row:hover { border-color: rgba(110,168,254,.30); }
+      .pill { background: rgba(255,255,255,.06); border: 1px solid #444; border-radius: 999px; display: inline-flex; font-size: 12px; padding: 6px 10px; width: fit-content; }
+      .approved { border-color: rgba(37,214,149,.55); color: #b5f4df; }
+      .pending { border-color: rgba(251,191,36,.55); color: #ffe7a3; }
+      .rejected, .blocked { border-color: rgba(255,107,107,.55); color: #ffd7d7; }
+      .logs { max-height: 680px; overflow: auto; }
+      .log { background: rgba(12,17,26,.55); border: 1px solid rgba(255,255,255,.06); border-radius: 16px; margin-top: 10px; padding: 12px; }
+      .chart { align-items:end; display:flex; gap:8px; height:160px; margin-top:16px; }
+      .bar { background: linear-gradient(180deg, var(--green), var(--blue)); border-radius:999px 999px 8px 8px; flex:1; min-height:12px; opacity:.92; }
+      .donut { aspect-ratio:1; background: conic-gradient(var(--green) 0 var(--approvedDeg, 0deg), var(--amber) var(--approvedDeg,0deg) var(--pendingDeg,0deg), var(--red) var(--pendingDeg,0deg) 360deg); border-radius:50%; margin:18px auto; max-width:220px; position:relative; }
+      .donut:after { background: #111722; border-radius:50%; content:""; inset:22%; position:absolute; }
+      .legend { display:grid; gap:8px; }
+      .legend span { align-items:center; color:var(--muted); display:flex; gap:8px; }
+      .dot { border-radius:50%; height:9px; width:9px; }
       .hidden { display: none !important; }
       .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-      .status { border-left: 4px solid #737373; background: #171a20; border-radius: 10px; color: #d4d4d4; padding: 12px; }
-      .status.ok { border-left-color: #10a37f; color: #b5f4df; }
-      .status.bad { border-left-color: #ef4444; color: #ffd7d7; }
+      .status { border-left: 4px solid #737373; background: rgba(12,17,26,.78); border-radius: 14px; color: #d4d4d4; padding: 12px; }
+      .status.ok { border-left-color: var(--green); color: #b5f4df; }
+      .status.bad { border-left-color: var(--red); color: #ffd7d7; }
       @media (max-width: 900px) { .grid, .layout, .row { grid-template-columns: 1fr; } .wrap { padding: 14px; } }
     </style>
   </head>
   <body>
     <main class="wrap">
       <header class="top">
-        <div><h1>Cricket Live Admin</h1><p>Private approval center for users, keys, domains, usage and blocks.</p></div>
+        <div class="brandline"><div class="logo">CL</div><div><h1>Cricket Live Admin</h1><p>Private approval center for users, keys, domains, usage and blocks.</p></div></div>
         <button id="logoutBtn" class="secondary hidden" type="button">Sign out</button>
       </header>
 
@@ -134,8 +151,22 @@ export class DeveloperController {
         <div class="layout">
           <div class="stack">
             <div class="card">
+              <h2>Traffic overview</h2>
+              <p>Recent request volume by latest log activity.</p>
+              <div id="trafficChart" class="chart"></div>
+            </div>
+            <div class="card">
               <h2>All API keys</h2>
               <p>Approve, reject, check verification, or block any key.</p>
+              <div class="toolbar">
+                <input id="adminSearch" placeholder="Search user, key, domain..." />
+                <div class="filters">
+                  <button class="filter active" data-filter="all" type="button">All</button>
+                  <button class="filter" data-filter="pending" type="button">Pending</button>
+                  <button class="filter" data-filter="approved" type="button">Approved</button>
+                  <button class="filter" data-filter="blocked" type="button">Blocked</button>
+                </div>
+              </div>
               <div id="keyRows" class="stack" style="margin-top:14px;"></div>
             </div>
             <div class="card">
@@ -144,6 +175,14 @@ export class DeveloperController {
             </div>
           </div>
           <aside class="card">
+            <h2>Approval mix</h2>
+            <div id="approvalDonut" class="donut"></div>
+            <div class="legend">
+              <span><i class="dot" style="background:var(--green)"></i>Approved <strong id="legendApproved">0</strong></span>
+              <span><i class="dot" style="background:var(--amber)"></i>Pending <strong id="legendPending">0</strong></span>
+              <span><i class="dot" style="background:var(--red)"></i>Blocked/rejected <strong id="legendBlocked">0</strong></span>
+            </div>
+            <div style="height:18px"></div>
             <h2>Realtime request logs</h2>
             <div id="logRows" class="logs"></div>
           </aside>
@@ -158,9 +197,17 @@ export class DeveloperController {
       const keyRows = document.getElementById("keyRows");
       const userRows = document.getElementById("userRows");
       const logRows = document.getElementById("logRows");
+      const adminSearch = document.getElementById("adminSearch");
+      const trafficChart = document.getElementById("trafficChart");
+      const approvalDonut = document.getElementById("approvalDonut");
+      const legendApproved = document.getElementById("legendApproved");
+      const legendPending = document.getElementById("legendPending");
+      const legendBlocked = document.getElementById("legendBlocked");
       const initialAdminToken = ${JSON.stringify(initialAdminToken)};
       let token = initialAdminToken || localStorage.getItem("cricketAdminToken") || "";
       let timer = 0;
+      let adminData = null;
+      let currentFilter = "all";
 
       function esc(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -181,8 +228,79 @@ export class DeveloperController {
         if (!response.ok) throw new Error(payload.error || "Request failed");
         return payload.data;
       }
+      function keyStatus(key) {
+        if (key.revoked) return "blocked";
+        return key.approvalStatus || "pending";
+      }
+      function renderTraffic(logs) {
+        const buckets = Array.from({ length: 8 }, () => 0);
+        const step = Math.max(Math.ceil((logs || []).length / buckets.length), 1);
+        (logs || []).forEach((_, index) => {
+          buckets[Math.min(buckets.length - 1, Math.floor(index / step))] += 1;
+        });
+        const max = Math.max(...buckets, 1);
+        trafficChart.innerHTML = buckets.map((value) => {
+          const height = Math.max(12, Math.round((value / max) * 100));
+          return '<span class="bar" title="' + number(value) + ' requests" style="height:' + height + '%"></span>';
+        }).join("");
+      }
+      function renderApprovalMix(keys) {
+        const approved = keys.filter((key) => keyStatus(key) === "approved").length;
+        const pending = keys.filter((key) => keyStatus(key) === "pending").length;
+        const blocked = keys.length - approved - pending;
+        const total = Math.max(keys.length, 1);
+        const approvedDeg = (approved / total) * 360;
+        const pendingDeg = ((approved + pending) / total) * 360;
+        approvalDonut.style.setProperty("--approvedDeg", approvedDeg + "deg");
+        approvalDonut.style.setProperty("--pendingDeg", pendingDeg + "deg");
+        legendApproved.textContent = number(approved);
+        legendPending.textContent = number(pending);
+        legendBlocked.textContent = number(blocked);
+      }
+      function renderKeys(keys) {
+        const query = adminSearch.value.trim().toLowerCase();
+        const filteredKeys = keys.filter((key) => {
+          const status = keyStatus(key);
+          const searchable = [
+            key.name,
+            key.email,
+            key.keyPrefix,
+            ...(key.requestedDomains || []),
+            ...(key.approvedDomains || [])
+          ].join(" ").toLowerCase();
+          return (currentFilter === "all" || status === currentFilter) && (!query || searchable.includes(query));
+        });
+        keyRows.innerHTML = filteredKeys.map((key) => {
+          const status = keyStatus(key);
+          return '<div class="row">' +
+            '<div><strong>' + esc(key.name) + '</strong><div class="fine">' + esc(key.email) + '</div><div class="fine">' + esc(key.keyPrefix) + '</div></div>' +
+            '<div><span class="pill ' + esc(status) + '">' + esc(status) + '</span><div class="fine">Requested: ' + esc((key.requestedDomains || []).join(", ") || "--") + '</div><div class="fine">Approved: ' + esc((key.approvedDomains || []).join(", ") || "--") + '</div></div>' +
+            '<div><strong>' + number(key.usageCount) + '</strong><div class="fine">Last used: ' + esc(date(key.lastUsedAt)) + '</div></div>' +
+            '<div class="actions">' +
+              '<button class="secondary" data-check="' + esc(key.keyPrefix) + '" data-domain="' + esc((key.requestedDomains || [])[0] || "") + '">Check</button>' +
+              '<button data-approve="' + esc(key.keyPrefix) + '">Approve</button>' +
+              '<button class="secondary" data-reject="' + esc(key.keyPrefix) + '">Reject</button>' +
+              '<button class="danger" data-block="' + esc(key.keyPrefix) + '">Block</button>' +
+            '</div>' +
+          '</div>';
+        }).join("") || '<p class="fine">No API keys match this view.</p>';
+      }
+      function renderDashboard(data) {
+        document.getElementById("statUsers").textContent = number(data.stats.users);
+        document.getElementById("statKeys").textContent = number(data.stats.keys);
+        document.getElementById("statPending").textContent = number(data.stats.pending);
+        document.getElementById("statUsage").textContent = number(data.stats.usage);
+        renderTraffic(data.recentLogs || []);
+        renderApprovalMix(data.keys || []);
+        renderKeys(data.keys || []);
+        userRows.innerHTML = data.users.map((user) => '<div class="row" style="grid-template-columns:1fr auto auto auto;"><div><strong>' + esc(user.email) + '</strong></div><div>Usage ' + number(user.usage) + '</div><div>Active ' + number(user.activeKeys) + '</div><div>Blocked ' + number(user.blocked) + '</div></div>').join("") || '<p class="fine">No users found.</p>';
+        logRows.innerHTML = data.recentLogs.map((log) => '<div class="log"><code>' + esc(log.method) + ' ' + esc(log.path) + '</code><div class="fine">' + esc(log.email) + ' - ' + esc(log.status) + ' - ' + esc(log.message) + '</div><div class="fine">' + esc(log.origin || "no origin") + ' - ' + esc(date(log.createdAt)) + '</div></div>').join("") || '<p class="fine">No logs yet.</p>';
+      }
       async function load() {
         const data = await api("/api/developer/admin/overview");
+        adminData = data;
+        renderDashboard(data);
+        queueMicrotask(() => renderDashboard(data));
         loginCard.classList.add("hidden");
         adminApp.classList.remove("hidden");
         logoutBtn.classList.remove("hidden");
@@ -211,6 +329,16 @@ export class DeveloperController {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         await loginWithCredentials(String(form.get("email") || ""), String(form.get("password") || ""));
+      });
+      adminSearch.addEventListener("input", () => {
+        if (adminData) renderKeys(adminData.keys || []);
+      });
+      document.querySelectorAll("[data-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          currentFilter = button.dataset.filter || "all";
+          document.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
+          if (adminData) renderKeys(adminData.keys || []);
+        });
       });
 
       async function loginWithCredentials(email, password) {
