@@ -127,6 +127,7 @@ API_KEY_OTP_TTL_MINUTES=10
 API_KEY_OTP_RESEND_SECONDS=60
 API_KEY_OTP_MAX_ATTEMPTS=5
 API_ADMIN_EMAILS=admin@example.com
+API_ADMIN_CONSOLE_PATH=cricket-command-approval-center-7f4d2a9x
 
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -205,6 +206,7 @@ API keys use an approval workflow:
 ```
 
 Set `API_ADMIN_EMAILS` to a comma-separated list of Google accounts that can approve or reject domain requests.
+Set `API_ADMIN_CONSOLE_PATH` to a private 12-80 character slug. The admin console will be available at `/api/developer/<slug>`.
 
 API keys include:
 

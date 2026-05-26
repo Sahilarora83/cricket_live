@@ -45,6 +45,10 @@ const schema = z.object({
   API_KEY_OTP_RESEND_SECONDS: z.coerce.number().int().min(10).default(60),
   API_KEY_OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(5),
   API_ADMIN_EMAILS: z.string().default(""),
+  API_ADMIN_CONSOLE_PATH: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{12,80}$/)
+    .default("cricket-command-approval-center-7f4d2a9x"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),

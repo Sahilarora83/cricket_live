@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
 import { ApiKeyServiceError, type ApiKeyService } from "../services/apiKeyService.js";
 import { FirebaseAuthError, verifyFirebaseIdToken } from "../services/firebaseAuthService.js";
 
@@ -782,6 +783,10 @@ export class DeveloperController {
       const auth = getAuth(firebaseApp);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      const adminConsolePath = ${JSON.stringify(`/api/developer/${env.API_ADMIN_CONSOLE_PATH}`)};
+      if (location.pathname === adminConsolePath && !location.hash) {
+        location.hash = "approvals";
+      }
       const form = document.getElementById("keyForm");
       const revokeForm = document.getElementById("revokeForm");
       const result = document.getElementById("result");
@@ -1206,6 +1211,7 @@ export class DeveloperController {
           playgroundKey.value = currentKey;
           apiKeyBox.value = currentKey;
           verificationBox.value = payload.data.verificationToken || "";
+          downloadVerificationFile(verificationBox.value);
           exampleBox.value = '<div id="cricket-live-widget">Loading live cricket scores...</div>\\n<script async src="' + location.origin + '/api/developer/widget.js" data-api-key="' + currentKey + '" data-target="cricket-live-widget" data-refresh="30000"><\\/script>';
           quotaStatus.className = "status ok";
           quotaStatus.textContent = "Copy it now. Status: pending admin approval. Limit: " + payload.data.monthlyQuota + " requests/month for this email.";

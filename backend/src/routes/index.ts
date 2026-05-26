@@ -43,6 +43,7 @@ export function createRoutes(
   router.post("/series/ipl-2026/refresh", requireRefreshSecret, seriesController.refreshIplSeries);
   router.get("/system-status", publicRateLimit, (_request, response) => response.json({ data: getSystemStatus() }));
   router.get("/developer/api-keys", developerController.getApiKeyPortal);
+  router.get(`/developer/${env.API_ADMIN_CONSOLE_PATH}`, developerController.getApiKeyPortal);
   router.get("/developer/widget.js", developerController.getWidgetScript);
   router.get("/developer/api-keys/me", developerRateLimit, developerController.getMyApiKeys);
   router.get("/developer/api-keys/approvals", developerRateLimit, developerController.getApprovalRequests);
