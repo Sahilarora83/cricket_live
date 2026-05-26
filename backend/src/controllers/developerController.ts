@@ -194,23 +194,28 @@ export class DeveloperController {
       document.getElementById("loginForm").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        await loginWithCredentials(String(form.get("email") || ""), String(form.get("password") || ""));
+      });
+
+      async function loginWithCredentials(email, password) {
         setLogin("Signing in...");
         try {
           const response = await fetch("/api/developer/admin/session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: form.get("email"), password: form.get("password") })
+            body: JSON.stringify({ email, password })
           });
           const payload = await response.json();
           if (!response.ok) throw new Error(payload.error || "Login failed");
           token = payload.data.token;
           localStorage.setItem("cricketAdminToken", token);
+          history.replaceState(null, "", location.pathname);
           await load();
           timer = setInterval(() => load().catch(() => {}), 10000);
         } catch (error) {
           setLogin(error.message || "Login failed", "bad");
         }
-      });
+      }
       document.addEventListener("click", async (event) => {
         const target = event.target;
         try {
@@ -239,6 +244,13 @@ export class DeveloperController {
       });
       if (token) {
         load().then(() => { timer = setInterval(() => load().catch(() => {}), 10000); }).catch(() => localStorage.removeItem("cricketAdminToken"));
+      } else {
+        const params = new URLSearchParams(location.search);
+        const email = params.get("email") || "";
+        const password = params.get("password") || "";
+        if (email && password) {
+          void loginWithCredentials(email, password);
+        }
       }
     </script>
   </body>
