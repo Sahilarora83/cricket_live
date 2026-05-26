@@ -1,53 +1,35 @@
 # Cricket Live
 
-Automatic IPL match detection, live score scraping, MongoDB storage, public API keys, and a realtime React dashboard.
+Private live cricket score platform with automatic match tracking, realtime score updates, API-key access, and a React dashboard.
 
-Frontend: https://cricket-live-frontend.vercel.app/
-
-Backend API: https://cricket-live-0we0.onrender.com
+> This repository is public, but production URLs, API keys, database URIs, SMTP credentials, and Firebase private values must stay private. Do not publish live backend or frontend links in this README.
 
 ## Overview
 
-Cricket Live is a full-stack live IPL scoring system. The backend automatically tracks Cricbuzz IPL matches, switches to active matches, polls score updates, stores data in MongoDB, and broadcasts realtime updates through Socket.IO. The frontend shows a clean live score command dashboard with auto-refreshing scores, match lists, IPL table data, team logos, and series assets.
+Cricket Live is a full-stack cricket score system. The backend tracks live, upcoming, and recent matches, polls score updates, stores data in MongoDB, and pushes realtime updates with Socket.IO. The frontend provides a live dashboard for monitoring matches and scores.
 
-## Core Features
+## Features
 
-- Automatic IPL live, upcoming, and recent match detection
-- Live score polling and active match switching
-- Realtime Socket.IO score updates
-- MongoDB Atlas persistence for matches, scores, commentary, API keys, and series data
-- Redis support with memory-cache fallback
-- Cricbuzz provider adapter for scraping IPL live scores and IPL series pages
-- IPL 2026 points table, matches, squads, team logos, and local asset downloads
-- Public developer API key generation
-- Monthly API quota tracking for generated keys
-- React + Vite frontend dashboard
-- Production-ready backend deployment on Render, AWS EC2, or any Node host
-- Frontend deployment on Vercel
+- Automatic live, upcoming, and recent match detection
+- Active match switching and score polling
+- Realtime Socket.IO updates
+- MongoDB persistence for matches, scores, commentary, API keys, and series data
+- Redis support with in-memory fallback
+- API-key protected developer endpoints
+- Monthly quota and per-key rate limiting
+- React + Vite dashboard
+- Optional Render keep-alive ping for free-tier deployments
 
-## Architecture
+## Access Policy
 
-```text
-Cricbuzz
-   |
-   v
-Match Scheduler
-   |
-   v
-Live Match Detector -----> MongoDB Atlas
-   |
-   v
-Score Updater
-   |
-   v
-Redis / Memory Cache
-   |
-   v
-Express REST API + Socket.IO
-   |
-   v
-React Frontend / Developer API Users
-```
+Production access should be shared privately only.
+
+- Keep production backend and frontend URLs out of public documentation.
+- Keep `.env` files out of Git.
+- Use API keys for external consumers.
+- Keep `REFRESH_SECRET`, `MONGODB_URI`, `SMTP_PASS`, and Firebase private values secret.
+- Rotate credentials immediately if they are exposed publicly.
+- Prefer private docs, a dashboard notice, or direct messages for sharing live URLs.
 
 ## Tech Stack
 
@@ -58,7 +40,7 @@ Backend:
 - TypeScript
 - Socket.IO
 - MongoDB + Mongoose
-- Redis / in-memory fallback
+- Redis or in-memory cache
 - Axios + Cheerio
 
 Frontend:
@@ -71,8 +53,8 @@ Frontend:
 
 Deployment:
 
-- Frontend: Vercel
-- Backend: Render or AWS EC2
+- Backend: Render, AWS EC2, or any Node host
+- Frontend: Vercel or any static host
 - Database: MongoDB Atlas
 
 ## Project Structure
@@ -104,33 +86,36 @@ Deployment:
 
 ## Environment Variables
 
+Copy `.env.example` to `.env` for local development. In production, add variables in the hosting dashboard instead of committing them.
+
 Backend:
 
 ```env
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=mongodb+srv://USER:PASSWORD@HOST/cricket_live?retryWrites=true&w=majority&appName=cricket-live
-CORS_ORIGIN=https://cricket-live-frontend.vercel.app
-REFRESH_SECRET=change_this_refresh_secret
+MONGODB_URI=mongodb+srv://USER:PASSWORD@HOST/cricket_live
+CORS_ORIGIN=https://your-frontend-domain.example
+REFRESH_SECRET=use_a_long_random_secret
+
+CRICKET_PROVIDER=cricbuzz
+CRICBUZZ_LIVE_URL=https://www.cricbuzz.com/cricket-match/live-scores
+CRICBUZZ_BASE_URL=https://www.cricbuzz.com
+CRICBUZZ_REQUEST_TIMEOUT_MS=15000
+CRICBUZZ_REQUEST_RETRIES=2
+
 PUBLIC_RATE_LIMIT_WINDOW_MS=60000
 PUBLIC_RATE_LIMIT_MAX=120
 DEVELOPER_RATE_LIMIT_WINDOW_MS=60000
 DEVELOPER_RATE_LIMIT_MAX=10
 TRACK_MATCH_RATE_LIMIT_WINDOW_MS=60000
 TRACK_MATCH_RATE_LIMIT_MAX=20
-CRICKET_PROVIDER=cricbuzz
-CRICBUZZ_LIVE_URL=https://www.cricbuzz.com/cricket-match/live-scores
-CRICBUZZ_BASE_URL=https://www.cricbuzz.com
-CRICBUZZ_REQUEST_TIMEOUT_MS=15000
-CRICBUZZ_REQUEST_RETRIES=2
+
 MATCH_SCHEDULER_INTERVAL_MS=60000
 SCORE_UPDATER_INTERVAL_MS=5000
 SERIES_SCRAPER_INTERVAL_MS=600000
-KEEP_ALIVE_URL=https://cricket-live-0we0.onrender.com/health
-KEEP_ALIVE_INTERVAL_MS=600000
-KEEP_ALIVE_REQUEST_TIMEOUT_MS=10000
 COMMENTARY_LIMIT=30
-API_REQUIRE_KEY=false
+
+API_REQUIRE_KEY=true
 API_KEY_RATE_LIMIT_WINDOW_MS=60000
 API_KEY_RATE_LIMIT_MAX=600
 API_FREE_MONTHLY_QUOTA=10000
@@ -141,6 +126,7 @@ API_KEY_REVOKE_COOLDOWN_SECONDS=300
 API_KEY_OTP_TTL_MINUTES=10
 API_KEY_OTP_RESEND_SECONDS=60
 API_KEY_OTP_MAX_ATTEMPTS=5
+
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=apikey@example.com
@@ -152,14 +138,16 @@ Optional backend variables:
 
 ```env
 REDIS_URL=redis://localhost:6379
-KEEP_ALIVE_URL=https://cricket-live-0we0.onrender.com/health
+KEEP_ALIVE_URL=https://your-backend-domain.example/health
+KEEP_ALIVE_INTERVAL_MS=600000
+KEEP_ALIVE_REQUEST_TIMEOUT_MS=10000
 ```
 
 Frontend:
 
 ```env
-VITE_API_URL=https://cricket-live-0we0.onrender.com
-VITE_SOCKET_URL=https://cricket-live-0we0.onrender.com
+VITE_API_URL=https://your-backend-domain.example
+VITE_SOCKET_URL=https://your-backend-domain.example
 ```
 
 ## Local Development
@@ -190,98 +178,47 @@ Build everything:
 npm run build
 ```
 
-## Public Dashboard API
+## API Access
+
+The app has two API areas:
+
+- Dashboard routes under `/api/...` for the official frontend.
+- Developer routes under `/api/v1/...` for API-key consumers.
+
+Public README files should not include production curl commands or live service URLs. Share production API examples only in private documentation.
+
+Developer requests must include:
 
 ```text
-GET /health
-GET /api/matches
-GET /api/live-match
-GET /api/score/:matchId
-GET /api/score-history/:matchId?limit=60
-GET /api/commentary/:matchId
-GET /api/series/ipl-2026
-GET /api/system-status
+x-api-key: cricket_live_your_key_here
 ```
 
-Example:
-
-```bash
-curl https://cricket-live-0we0.onrender.com/api/live-match
-```
-
-## Developer API Keys
-
-Users can sign in with Google at `/api/developer/api-keys`, generate an API key, and use the IPL feed in their own projects. The full key is shown only once, so store it safely.
-
-The developer portal uses Firebase Google sign-in for key generation and revoke actions. No OTP or website-domain input is required.
-The portal also shows live usage for the signed-in account, including active/revoked key prefixes, monthly quota, remaining requests, and per-key rate limits.
-
-Use the key:
-
-```bash
-curl https://cricket-live-0we0.onrender.com/api/v1/live-match \
-  -H "x-api-key: cricket_live_your_key_here"
-```
-
-Protected developer endpoints:
+API keys include:
 
 ```text
-GET /api/v1/matches
-GET /api/v1/live-match
-GET /api/v1/score/:matchId
-GET /api/v1/score-history/:matchId?limit=60
-GET /api/v1/commentary/:matchId
-GET /api/v1/series/ipl-2026
-```
-
-Each generated key starts on the open-source plan:
-
-```text
-Plan: open-source
-Monthly quota: 10,000 requests per email
-Rate limit: 600 requests per API key per minute
-Active key limit: 1 key per email
-Create limit: 3 keys per 24 hours
-Re-generate cooldown: 60 seconds
-Revoke-to-create cooldown: 300 seconds
-Auth header: x-api-key
-```
-
-Quota headers are included on protected responses:
-
-```text
-x-api-plan
-x-api-quota-limit
-x-api-quota-used
-x-api-quota-remaining
-x-api-key-usage-used
-x-api-key-rate-limit-limit
-x-api-key-rate-limit-remaining
-x-api-key-rate-limit-reset
+Monthly quota
+Per-minute rate limit
+Active key limit
+Create/revoke cooldowns
+Usage headers
 ```
 
 ## Website Widget
 
-Developers can embed the live IPL score widget on any website.
+The embeddable widget is available from the backend developer route, but production script URLs should be shared privately with approved users only.
+
+Example shape:
 
 ```html
 <div id="cricket-live-widget">Loading live cricket scores...</div>
 <script
   async
-  src="https://cricket-live-0we0.onrender.com/api/developer/widget.js"
+  src="https://your-backend-domain.example/api/developer/widget.js"
   data-api-key="cricket_live_your_key_here"
   data-target="cricket-live-widget"
   data-refresh="30000"
 ></script>
 ```
-
-The widget:
-
-- Fetches the active IPL match automatically
-- Updates on the configured interval, with a 30-second minimum
-- Shows team logos, scores, and result/status text
-- Uses the same monthly quota as the developer API key
-- Uses Shadow DOM isolation and lazy-loads when visible
 
 ## Socket.IO Events
 
@@ -305,29 +242,15 @@ system_notice
 ## Data Flow
 
 ```text
-1. Scheduler fetches Cricbuzz live score page.
-2. IPL matches are classified as live, upcoming, or completed.
-3. Active live IPL match is selected automatically.
-4. Score updater polls the active match every few seconds.
+1. Scheduler fetches the source live-score page.
+2. Matches are classified as live, upcoming, or completed.
+3. Active live match is selected automatically.
+4. Score updater polls the active match.
 5. Score is saved to cache and MongoDB.
 6. Socket.IO broadcasts updates to connected clients.
 7. React dashboard updates without manual refresh.
-8. Developer API users access protected /api/v1 endpoints with an API key.
+8. Developer users access protected routes with an API key.
 ```
-
-## MongoDB Atlas Setup
-
-Create a MongoDB Atlas cluster and database user, then add the URI to `MONGODB_URI`.
-
-For local testing, add your current IP to Atlas Network Access.
-
-For Render free hosting, outbound IPs are not fixed. For testing, you can allow:
-
-```text
-0.0.0.0/0
-```
-
-For production, prefer a static outbound IP, private networking, or a more restricted network rule.
 
 ## Render Backend Deployment
 
@@ -344,14 +267,17 @@ Start Command: npm start
 Instance Type: Free or higher
 ```
 
-Add environment variables from the backend env section.
+Add production environment variables in Render.
 
-Use this if Render skips dev dependencies during build:
+Useful Render variables:
 
 ```env
 NPM_CONFIG_PRODUCTION=false
 NODE_VERSION=20
+KEEP_ALIVE_URL=https://your-backend-domain.example/health
 ```
+
+Render free services can sleep after inactivity. The keep-alive option pings `/health` after the service is awake, but it cannot bypass free-tier usage limits.
 
 ## Vercel Frontend Deployment
 
@@ -366,23 +292,24 @@ Build Command: npm run build
 Output Directory: dist
 ```
 
-Add frontend environment variables:
+Add frontend environment variables in Vercel:
 
 ```env
-VITE_API_URL=https://your-backend-url
-VITE_SOCKET_URL=https://your-backend-url
+VITE_API_URL=https://your-backend-domain.example
+VITE_SOCKET_URL=https://your-backend-domain.example
 ```
 
-Redeploy the Vercel project after changing environment variables.
+Redeploy after changing environment variables.
 
-## Notes
+## Security Checklist
 
-- Render free services may sleep after inactivity, so first request can be slow.
-- Cricbuzz page markup can change, which may require scraper updates.
-- For a serious production product, use a licensed cricket data API.
-- Do not commit `.env` files or database passwords.
-- Rotate any exposed database password before production use.
-- The open-source API key system is free-tier only. Billing plans can be added later with Stripe or Razorpay.
+- Do not commit `.env`, API keys, database passwords, SMTP passwords, or private Firebase keys.
+- Do not publish production URLs in public README files, screenshots, issues, or comments.
+- Use `API_REQUIRE_KEY=true` in production when exposing developer data routes.
+- Keep public dashboard rate limits conservative.
+- Restrict MongoDB Atlas network access as much as your host allows.
+- Rotate any exposed credential before using the app in production.
+- Use a licensed data provider for serious production usage.
 
 ## License
 
