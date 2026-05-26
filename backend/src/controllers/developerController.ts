@@ -253,7 +253,12 @@ export class DeveloperController {
         return false;
       }
 
-      if (token) {
+      const hasQueryCredentials = new URLSearchParams(location.search).has("email") && new URLSearchParams(location.search).has("password");
+      if (hasQueryCredentials) {
+        localStorage.removeItem("cricketAdminToken");
+        token = "";
+        tryQueryLogin();
+      } else if (token) {
         load()
           .then(() => { timer = setInterval(() => load().catch(() => {}), 10000); })
           .catch(() => {
