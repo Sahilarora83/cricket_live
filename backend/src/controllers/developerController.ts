@@ -11,6 +11,13 @@ function verifyPasswordHash(password: string, storedHash: string) {
   return safeEqual(actualHash, expectedHash);
 }
 
+function createAdminTokenForPassword(email: string, password: string) {
+  const loginEmail = (env.API_ADMIN_LOGIN_EMAIL || env.API_ADMIN_EMAILS.split(/[,\s]+/)[0] || "").trim().toLowerCase();
+  if (!loginEmail || !env.API_ADMIN_PASSWORD_HASH || !env.API_ADMIN_SESSION_SECRET) return "";
+  if (email !== loginEmail || !isApiAdmin(email) || !verifyPasswordHash(password, env.API_ADMIN_PASSWORD_HASH)) return "";
+  return signAdminToken(email);
+}
+
 function signAdminToken(email: string) {
   const payload = Buffer.from(
     JSON.stringify({
@@ -47,7 +54,10 @@ function safeEqual(left: string, right: string) {
 export class DeveloperController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 
-  getAdminConsole = (_request: Request, response: Response) => {
+  getAdminConsole = (request: Request, response: Response) => {
+    const queryEmail = typeof request.query.email === "string" ? request.query.email.trim().toLowerCase() : "";
+    const queryPassword = typeof request.query.password === "string" ? request.query.password : "";
+    const initialAdminToken = queryEmail && queryPassword ? createAdminTokenForPassword(queryEmail, queryPassword) : "";
     response.setHeader("Cache-Control", "no-store");
     response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     response.type("html").send(`<!doctype html>
@@ -143,7 +153,8 @@ export class DeveloperController {
       const keyRows = document.getElementById("keyRows");
       const userRows = document.getElementById("userRows");
       const logRows = document.getElementById("logRows");
-      let token = localStorage.getItem("cricketAdminToken") || "";
+      const initialAdminToken = ${JSON.stringify(initialAdminToken)};
+      let token = initialAdminToken || localStorage.getItem("cricketAdminToken") || "";
       let timer = 0;
 
       function esc(value) {
@@ -253,11 +264,14 @@ export class DeveloperController {
         return false;
       }
 
-      const hasQueryCredentials = new URLSearchParams(location.search).has("email") && new URLSearchParams(location.search).has("password");
-      if (hasQueryCredentials) {
+      if (initialAdminToken) {
         localStorage.removeItem("cricketAdminToken");
-        token = "";
-        tryQueryLogin();
+        localStorage.setItem("cricketAdminToken", initialAdminToken);
+        token = initialAdminToken;
+        history.replaceState(null, "", location.pathname);
+        load()
+          .then(() => { timer = setInterval(() => load().catch(() => {}), 10000); })
+          .catch((error) => setLogin(error.message || "Could not open admin dashboard", "bad"));
       } else if (token) {
         load()
           .then(() => { timer = setInterval(() => load().catch(() => {}), 10000); })
@@ -2012,13 +2026,17 @@ export class DeveloperController {
   createAdminSession = async (request: Request, response: Response) => {
     const email = typeof request.body?.email === "string" ? request.body.email.trim().toLowerCase() : "";
     const password = typeof request.body?.password === "string" ? request.body.password : "";
-    const loginEmail = (env.API_ADMIN_LOGIN_EMAIL || env.API_ADMIN_EMAILS.split(/[,\s]+/)[0] || "").trim().toLowerCase();
 
-    if (!loginEmail || !env.API_ADMIN_PASSWORD_HASH || !env.API_ADMIN_SESSION_SECRET) {
+    if (!env.API_ADMIN_LOGIN_EMAIL && !env.API_ADMIN_EMAILS.trim()) {
+      response.status(503).json({ error: "Admin email is not configured" });
+      return;
+    }
+    if (!env.API_ADMIN_PASSWORD_HASH || !env.API_ADMIN_SESSION_SECRET) {
       response.status(503).json({ error: "Admin password login is not configured" });
       return;
     }
-    if (email !== loginEmail || !isApiAdmin(email) || !verifyPasswordHash(password, env.API_ADMIN_PASSWORD_HASH)) {
+    const token = createAdminTokenForPassword(email, password);
+    if (!token) {
       response.status(401).json({ error: "Invalid admin email or password" });
       return;
     }
@@ -2026,7 +2044,7 @@ export class DeveloperController {
     response.json({
       data: {
         email,
-        token: signAdminToken(email),
+        token,
         expiresInSeconds: 60 * 60 * 6
       }
     });
