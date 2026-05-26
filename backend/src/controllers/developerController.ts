@@ -58,6 +58,10 @@ export class DeveloperController {
     const queryEmail = typeof request.query.email === "string" ? request.query.email.trim().toLowerCase() : "";
     const queryPassword = typeof request.query.password === "string" ? request.query.password : "";
     const initialAdminToken = queryEmail && queryPassword ? createAdminTokenForPassword(queryEmail, queryPassword) : "";
+    response.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:"
+    );
     response.setHeader("Cache-Control", "no-store");
     response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     response.type("html").send(`<!doctype html>
