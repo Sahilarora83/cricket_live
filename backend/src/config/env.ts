@@ -49,6 +49,9 @@ const schema = z.object({
     .string()
     .regex(/^[a-zA-Z0-9_-]{12,80}$/)
     .default("cricket-command-approval-center-7f4d2a9x"),
+  API_ADMIN_LOGIN_EMAIL: z.string().optional(),
+  API_ADMIN_PASSWORD_HASH: z.string().optional(),
+  API_ADMIN_SESSION_SECRET: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),

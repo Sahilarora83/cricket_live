@@ -382,6 +382,97 @@ export class ApiKeyService {
     };
   }
 
+  async getAdminOverview(adminEmail: string) {
+    if (!isApiAdmin(adminEmail)) {
+      throw new ApiKeyServiceError("Administrator access is required", 403);
+    }
+
+    const usageMonth = currentUsageMonth();
+    const keys = await ApiKeyModel.find({})
+      .sort({ createdAt: -1 })
+      .limit(250)
+      .lean();
+    const recentLogs = await ApiRequestLogModel.find({})
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    const userMap = new Map<string, { email: string; keys: number; activeKeys: number; usage: number; pending: number; approved: number; rejected: number; blocked: number }>();
+
+    for (const key of keys) {
+      const row =
+        userMap.get(key.email) ||
+        { email: key.email, keys: 0, activeKeys: 0, usage: 0, pending: 0, approved: 0, rejected: 0, blocked: 0 };
+      row.keys += 1;
+      if (!key.revoked) row.activeKeys += 1;
+      if (key.revoked) row.blocked += 1;
+      if ((key.approvalStatus || "pending") === "pending") row.pending += 1;
+      if (key.approvalStatus === "approved") row.approved += 1;
+      if (key.approvalStatus === "rejected") row.rejected += 1;
+      if (key.usageMonth === usageMonth) row.usage += Number(key.usageCount || 0);
+      userMap.set(key.email, row);
+    }
+
+    const pendingCount = keys.filter((key) => !key.revoked && (key.approvalStatus || "pending") === "pending").length;
+    const approvedCount = keys.filter((key) => !key.revoked && key.approvalStatus === "approved").length;
+    const blockedCount = keys.filter((key) => key.revoked).length;
+    const totalUsage = keys.filter((key) => key.usageMonth === usageMonth).reduce((total, key) => total + Number(key.usageCount || 0), 0);
+
+    return {
+      usageMonth,
+      stats: {
+        users: userMap.size,
+        keys: keys.length,
+        pending: pendingCount,
+        approved: approvedCount,
+        blocked: blockedCount,
+        usage: totalUsage
+      },
+      users: Array.from(userMap.values()).sort((a, b) => b.usage - a.usage),
+      keys: keys.map((key) => ({
+        name: key.name,
+        email: key.email,
+        keyPrefix: key.keyPrefix,
+        requestedDomains: key.requestedDomains || key.allowedOrigins || [],
+        approvedDomains: key.approvedDomains || [],
+        approvalStatus: key.approvalStatus || "pending",
+        verificationToken: key.verificationToken || "",
+        usageMonth: key.usageMonth,
+        usageCount: key.usageMonth === usageMonth ? key.usageCount : 0,
+        monthlyQuota: key.monthlyQuota,
+        revoked: key.revoked,
+        createdAt: key.createdAt,
+        lastUsedAt: key.lastUsedAt,
+        reviewedAt: key.reviewedAt,
+        reviewedBy: key.reviewedBy,
+        rejectionReason: key.rejectionReason
+      })),
+      recentLogs: recentLogs.map((log) => ({
+        email: log.email,
+        keyPrefix: log.keyPrefix,
+        method: log.method,
+        path: log.path,
+        origin: log.origin || "",
+        status: log.status,
+        message: log.message || "",
+        createdAt: log.createdAt
+      }))
+    };
+  }
+
+  async blockApiKey(input: { adminEmail: string; keyPrefix: string }) {
+    if (!isApiAdmin(input.adminEmail)) {
+      throw new ApiKeyServiceError("Administrator access is required", 403);
+    }
+    const result = await ApiKeyModel.updateOne(
+      { keyPrefix: input.keyPrefix },
+      { $set: { revoked: true, revokedAt: new Date(), approvalStatus: "rejected", rejectionReason: "Blocked by administrator" } }
+    );
+    if (result.modifiedCount === 0) {
+      throw new ApiKeyServiceError("API key not found", 404);
+    }
+    return { blocked: true, keyPrefix: input.keyPrefix };
+  }
+
   async reviewApproval(input: { adminEmail: string; keyPrefix: string; action: "approve" | "reject"; reason?: string }) {
     if (!isApiAdmin(input.adminEmail)) {
       throw new ApiKeyServiceError("Administrator access is required", 403);

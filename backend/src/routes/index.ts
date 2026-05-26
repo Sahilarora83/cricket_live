@@ -43,8 +43,13 @@ export function createRoutes(
   router.post("/series/ipl-2026/refresh", requireRefreshSecret, seriesController.refreshIplSeries);
   router.get("/system-status", publicRateLimit, (_request, response) => response.json({ data: getSystemStatus() }));
   router.get("/developer/api-keys", developerController.getApiKeyPortal);
-  router.get(`/developer/${env.API_ADMIN_CONSOLE_PATH}`, developerController.getApiKeyPortal);
+  router.get(`/developer/${env.API_ADMIN_CONSOLE_PATH}`, developerController.getAdminConsole);
   router.get("/developer/widget.js", developerController.getWidgetScript);
+  router.post("/developer/admin/session", developerRateLimit, developerController.createAdminSession);
+  router.get("/developer/admin/overview", developerRateLimit, developerController.getAdminOverview);
+  router.post("/developer/admin/block-key", developerRateLimit, developerController.blockApiKey);
+  router.post("/developer/admin/approvals/verify", developerRateLimit, developerController.adminVerifyApprovalDomain);
+  router.post("/developer/admin/approvals/review", developerRateLimit, developerController.adminReviewApprovalRequest);
   router.get("/developer/api-keys/me", developerRateLimit, developerController.getMyApiKeys);
   router.get("/developer/api-keys/approvals", developerRateLimit, developerController.getApprovalRequests);
   router.post("/developer/api-keys", developerRateLimit, developerController.createApiKey);

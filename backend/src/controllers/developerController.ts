@@ -1,10 +1,249 @@
 import type { Request, Response } from "express";
+import crypto from "node:crypto";
 import { env } from "../config/env.js";
-import { ApiKeyServiceError, type ApiKeyService } from "../services/apiKeyService.js";
+import { ApiKeyServiceError, isApiAdmin, type ApiKeyService } from "../services/apiKeyService.js";
 import { FirebaseAuthError, verifyFirebaseIdToken } from "../services/firebaseAuthService.js";
+
+function verifyPasswordHash(password: string, storedHash: string) {
+  const [algorithm, expectedHash] = storedHash.split(":");
+  if (algorithm !== "sha256" || !expectedHash) return false;
+  const actualHash = crypto.createHash("sha256").update(password).digest("hex");
+  return safeEqual(actualHash, expectedHash);
+}
+
+function signAdminToken(email: string) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      email,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 6
+    })
+  ).toString("base64url");
+  const signature = crypto.createHmac("sha256", env.API_ADMIN_SESSION_SECRET || "").update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function verifyAdminToken(token: string) {
+  if (!token || !env.API_ADMIN_SESSION_SECRET) return "";
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return "";
+  const expectedSignature = crypto.createHmac("sha256", env.API_ADMIN_SESSION_SECRET).update(payload).digest("base64url");
+  if (!safeEqual(signature, expectedSignature)) return "";
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { email?: string; exp?: number };
+    const email = String(data.email || "").toLowerCase();
+    if (!email || !data.exp || data.exp < Math.floor(Date.now() / 1000) || !isApiAdmin(email)) return "";
+    return email;
+  } catch {
+    return "";
+  }
+}
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
 
 export class DeveloperController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
+
+  getAdminConsole = (_request: Request, response: Response) => {
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    response.type("html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cricket Live Admin</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      * { box-sizing: border-box; }
+      body { background: #0f0f0f; color: #f5f5f5; margin: 0; }
+      button, input, textarea, select { font: inherit; }
+      .wrap { margin: 0 auto; max-width: 1240px; padding: 28px; }
+      .top { align-items: center; border-bottom: 1px solid #2b2b2b; display: flex; gap: 16px; justify-content: space-between; padding-bottom: 18px; }
+      h1 { font-size: 28px; font-weight: 560; margin: 0; }
+      h2 { font-size: 18px; margin: 0; }
+      p { color: #a3a3a3; line-height: 1.55; margin: 6px 0 0; }
+      .card { background: #181818; border: 1px solid #303030; border-radius: 14px; padding: 18px; }
+      .grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0; }
+      .layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 360px; }
+      .stack { display: grid; gap: 12px; }
+      .stat span, .fine { color: #a3a3a3; font-size: 12px; }
+      .stat strong { display: block; font-size: 26px; margin-top: 6px; }
+      input { background: #101010; border: 1px solid #363636; border-radius: 10px; color: #fff; padding: 13px 14px; width: 100%; }
+      button { background: #f5f5f5; border: 0; border-radius: 10px; color: #111; cursor: pointer; font-weight: 560; min-height: 42px; padding: 0 14px; }
+      button.secondary { background: #2b2b2b; border: 1px solid #3a3a3a; color: #fff; }
+      button.danger { background: #4a1f1f; border: 1px solid #7a3333; color: #ffd7d7; }
+      .row { align-items: start; border: 1px solid #303030; border-radius: 12px; display: grid; gap: 12px; grid-template-columns: 1.2fr .9fr .6fr auto; padding: 14px; }
+      .pill { border: 1px solid #444; border-radius: 999px; display: inline-flex; font-size: 12px; padding: 5px 9px; width: fit-content; }
+      .approved { border-color: #10a37f; color: #b5f4df; }
+      .pending { border-color: #8a6d2f; color: #ffe7a3; }
+      .rejected, .blocked { border-color: #7a3333; color: #ffd7d7; }
+      .logs { max-height: 480px; overflow: auto; }
+      .log { border-bottom: 1px solid #2b2b2b; padding: 10px 0; }
+      .hidden { display: none !important; }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .status { border-left: 4px solid #737373; background: #171a20; border-radius: 10px; color: #d4d4d4; padding: 12px; }
+      .status.ok { border-left-color: #10a37f; color: #b5f4df; }
+      .status.bad { border-left-color: #ef4444; color: #ffd7d7; }
+      @media (max-width: 900px) { .grid, .layout, .row { grid-template-columns: 1fr; } .wrap { padding: 14px; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top">
+        <div><h1>Cricket Live Admin</h1><p>Private approval center for users, keys, domains, usage and blocks.</p></div>
+        <button id="logoutBtn" class="secondary hidden" type="button">Sign out</button>
+      </header>
+
+      <section id="loginCard" class="card" style="margin-top:20px;max-width:460px;">
+        <h2>Admin login</h2>
+        <p>Use the configured admin email and password.</p>
+        <form id="loginForm" class="stack" style="margin-top:14px;">
+          <input name="email" type="email" placeholder="admin@example.com" autocomplete="username" required />
+          <input name="password" type="password" placeholder="Password" autocomplete="current-password" required />
+          <button type="submit">Open admin console</button>
+        </form>
+        <p id="loginStatus" class="status" style="margin-top:14px;">Admin session is required.</p>
+      </section>
+
+      <section id="adminApp" class="hidden">
+        <div class="grid">
+          <div class="card stat"><span>Users</span><strong id="statUsers">--</strong></div>
+          <div class="card stat"><span>API keys</span><strong id="statKeys">--</strong></div>
+          <div class="card stat"><span>Pending</span><strong id="statPending">--</strong></div>
+          <div class="card stat"><span>Usage</span><strong id="statUsage">--</strong></div>
+        </div>
+        <div class="layout">
+          <div class="stack">
+            <div class="card">
+              <h2>All API keys</h2>
+              <p>Approve, reject, check verification, or block any key.</p>
+              <div id="keyRows" class="stack" style="margin-top:14px;"></div>
+            </div>
+            <div class="card">
+              <h2>Users</h2>
+              <div id="userRows" class="stack" style="margin-top:14px;"></div>
+            </div>
+          </div>
+          <aside class="card">
+            <h2>Realtime request logs</h2>
+            <div id="logRows" class="logs"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <script>
+      const loginCard = document.getElementById("loginCard");
+      const adminApp = document.getElementById("adminApp");
+      const loginStatus = document.getElementById("loginStatus");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const keyRows = document.getElementById("keyRows");
+      const userRows = document.getElementById("userRows");
+      const logRows = document.getElementById("logRows");
+      let token = localStorage.getItem("cricketAdminToken") || "";
+      let timer = 0;
+
+      function esc(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+      }
+      function number(value) { return Number(value || 0).toLocaleString(); }
+      function date(value) { return value ? new Date(value).toLocaleString() : "--"; }
+      function setLogin(message, type) {
+        loginStatus.className = "status" + (type ? " " + type : "");
+        loginStatus.textContent = message;
+      }
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          ...options,
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token, ...(options.headers || {}) },
+          cache: "no-store"
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Request failed");
+        return payload.data;
+      }
+      async function load() {
+        const data = await api("/api/developer/admin/overview");
+        loginCard.classList.add("hidden");
+        adminApp.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+        document.getElementById("statUsers").textContent = number(data.stats.users);
+        document.getElementById("statKeys").textContent = number(data.stats.keys);
+        document.getElementById("statPending").textContent = number(data.stats.pending);
+        document.getElementById("statUsage").textContent = number(data.stats.usage);
+        keyRows.innerHTML = data.keys.map((key) => {
+          const status = key.revoked ? "blocked" : key.approvalStatus || "pending";
+          return '<div class="row">' +
+            '<div><strong>' + esc(key.name) + '</strong><div class="fine">' + esc(key.email) + '</div><div class="fine">' + esc(key.keyPrefix) + '</div></div>' +
+            '<div><span class="pill ' + esc(status) + '">' + esc(status) + '</span><div class="fine">Requested: ' + esc((key.requestedDomains || []).join(", ") || "--") + '</div><div class="fine">Approved: ' + esc((key.approvedDomains || []).join(", ") || "--") + '</div></div>' +
+            '<div><strong>' + number(key.usageCount) + '</strong><div class="fine">Last used: ' + esc(date(key.lastUsedAt)) + '</div></div>' +
+            '<div class="actions">' +
+              '<button class="secondary" data-check="' + esc(key.keyPrefix) + '" data-domain="' + esc((key.requestedDomains || [])[0] || "") + '">Check</button>' +
+              '<button data-approve="' + esc(key.keyPrefix) + '">Approve</button>' +
+              '<button class="secondary" data-reject="' + esc(key.keyPrefix) + '">Reject</button>' +
+              '<button class="danger" data-block="' + esc(key.keyPrefix) + '">Block</button>' +
+            '</div>' +
+          '</div>';
+        }).join("") || '<p class="fine">No keys found.</p>';
+        userRows.innerHTML = data.users.map((user) => '<div class="row" style="grid-template-columns:1fr auto auto auto;"><div><strong>' + esc(user.email) + '</strong></div><div>Usage ' + number(user.usage) + '</div><div>Active ' + number(user.activeKeys) + '</div><div>Blocked ' + number(user.blocked) + '</div></div>').join("") || '<p class="fine">No users found.</p>';
+        logRows.innerHTML = data.recentLogs.map((log) => '<div class="log"><code>' + esc(log.method) + ' ' + esc(log.path) + '</code><div class="fine">' + esc(log.email) + ' · ' + esc(log.status) + ' · ' + esc(log.message) + '</div><div class="fine">' + esc(log.origin || "no origin") + ' · ' + esc(date(log.createdAt)) + '</div></div>').join("") || '<p class="fine">No logs yet.</p>';
+      }
+      document.getElementById("loginForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        setLogin("Signing in...");
+        try {
+          const response = await fetch("/api/developer/admin/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: form.get("email"), password: form.get("password") })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Login failed");
+          token = payload.data.token;
+          localStorage.setItem("cricketAdminToken", token);
+          await load();
+          timer = setInterval(() => load().catch(() => {}), 10000);
+        } catch (error) {
+          setLogin(error.message || "Login failed", "bad");
+        }
+      });
+      document.addEventListener("click", async (event) => {
+        const target = event.target;
+        try {
+          if (target.matches("[data-check]")) {
+            const data = await api("/api/developer/admin/approvals/verify", { method: "POST", body: JSON.stringify({ keyPrefix: target.dataset.check, domain: target.dataset.domain }) });
+            alert(data.ok ? "Verification matched" : "Verification failed: " + data.received);
+          } else if (target.matches("[data-approve]")) {
+            await api("/api/developer/admin/approvals/review", { method: "POST", body: JSON.stringify({ keyPrefix: target.dataset.approve, action: "approve" }) });
+            await load();
+          } else if (target.matches("[data-reject]")) {
+            const reason = prompt("Reject reason?", "Verification missing or invalid") || "Rejected by administrator";
+            await api("/api/developer/admin/approvals/review", { method: "POST", body: JSON.stringify({ keyPrefix: target.dataset.reject, action: "reject", reason }) });
+            await load();
+          } else if (target.matches("[data-block]")) {
+            if (!confirm("Block this API key now?")) return;
+            await api("/api/developer/admin/block-key", { method: "POST", body: JSON.stringify({ keyPrefix: target.dataset.block }) });
+            await load();
+          }
+        } catch (error) {
+          alert(error.message || "Action failed");
+        }
+      });
+      logoutBtn.addEventListener("click", () => {
+        localStorage.removeItem("cricketAdminToken");
+        location.reload();
+      });
+      if (token) {
+        load().then(() => { timer = setInterval(() => load().catch(() => {}), 10000); }).catch(() => localStorage.removeItem("cricketAdminToken"));
+      }
+    </script>
+  </body>
+</html>`);
+  };
 
   getApiKeyPortal = (_request: Request, response: Response) => {
     response.setHeader(
@@ -375,8 +614,6 @@ export class DeveloperController {
           <div class="auth-actions">
             <div id="authSkeleton" class="skeleton skeleton-button"></div>
             <span class="status-badge"><span class="pulse"></span> API Online</span>
-            <button class="icon-btn" id="themeToggle" type="button" title="Theme">◐</button>
-            <button class="icon-btn" type="button" title="Notifications">⌁</button>
             <div id="userCard" class="user-card" hidden>
               <img id="userPhoto" class="avatar" alt="" hidden />
               <div id="userInitial" class="avatar placeholder">U</div>
@@ -818,7 +1055,6 @@ export class DeveloperController {
       const heroKeys = document.getElementById("heroKeys");
       const overviewQuota = document.getElementById("overviewQuota");
       const portalSearch = document.getElementById("portalSearch");
-      const themeToggle = document.getElementById("themeToggle");
       const crumbs = document.getElementById("crumbs");
       const requestLogs = document.getElementById("requestLogs");
       const approvalList = document.getElementById("approvalList");
@@ -1085,10 +1321,6 @@ export class DeveloperController {
           const text = (card.getAttribute("data-search") || "").toLowerCase();
           card.hidden = Boolean(query) && !text.includes(query);
         });
-      });
-
-      themeToggle.addEventListener("click", () => {
-        setStatus("Dark mode is active for this developer console.", "ok");
       });
 
       googleSignInBtn.addEventListener("click", async () => {
@@ -1745,6 +1977,94 @@ export class DeveloperController {
       this.sendApiKeyError(response, error, "Domain verification is unavailable");
     }
   };
+
+  createAdminSession = async (request: Request, response: Response) => {
+    const email = typeof request.body?.email === "string" ? request.body.email.trim().toLowerCase() : "";
+    const password = typeof request.body?.password === "string" ? request.body.password : "";
+    const loginEmail = (env.API_ADMIN_LOGIN_EMAIL || env.API_ADMIN_EMAILS.split(/[,\s]+/)[0] || "").trim().toLowerCase();
+
+    if (!loginEmail || !env.API_ADMIN_PASSWORD_HASH || !env.API_ADMIN_SESSION_SECRET) {
+      response.status(503).json({ error: "Admin password login is not configured" });
+      return;
+    }
+    if (email !== loginEmail || !isApiAdmin(email) || !verifyPasswordHash(password, env.API_ADMIN_PASSWORD_HASH)) {
+      response.status(401).json({ error: "Invalid admin email or password" });
+      return;
+    }
+
+    response.json({
+      data: {
+        email,
+        token: signAdminToken(email),
+        expiresInSeconds: 60 * 60 * 6
+      }
+    });
+  };
+
+  getAdminOverview = async (request: Request, response: Response) => {
+    const adminEmail = this.getAdminEmailFromSession(request);
+    if (!adminEmail) {
+      response.status(401).json({ error: "Admin session is required" });
+      return;
+    }
+    try {
+      response.json({ data: await this.apiKeyService.getAdminOverview(adminEmail) });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Admin overview is unavailable");
+    }
+  };
+
+  blockApiKey = async (request: Request, response: Response) => {
+    const adminEmail = this.getAdminEmailFromSession(request);
+    const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : "";
+    if (!adminEmail) {
+      response.status(401).json({ error: "Admin session is required" });
+      return;
+    }
+    try {
+      response.json({ data: await this.apiKeyService.blockApiKey({ adminEmail, keyPrefix }) });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "API key block is unavailable");
+    }
+  };
+
+  adminVerifyApprovalDomain = async (request: Request, response: Response) => {
+    const adminEmail = this.getAdminEmailFromSession(request);
+    const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : "";
+    const domain = typeof request.body?.domain === "string" ? request.body.domain : "";
+    if (!adminEmail) {
+      response.status(401).json({ error: "Admin session is required" });
+      return;
+    }
+    try {
+      const result = await this.apiKeyService.verifyApprovalDomain({ adminEmail, keyPrefix, domain });
+      response.json({ data: result });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Domain verification is unavailable");
+    }
+  };
+
+  adminReviewApprovalRequest = async (request: Request, response: Response) => {
+    const adminEmail = this.getAdminEmailFromSession(request);
+    const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : "";
+    const action = request.body?.action === "reject" ? "reject" : "approve";
+    const reason = typeof request.body?.reason === "string" ? request.body.reason : undefined;
+    if (!adminEmail) {
+      response.status(401).json({ error: "Admin session is required" });
+      return;
+    }
+    try {
+      response.json({ data: await this.apiKeyService.reviewApproval({ adminEmail, keyPrefix, action, reason }) });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Approval review is unavailable");
+    }
+  };
+
+  private getAdminEmailFromSession(request: Request) {
+    const authorization = request.header("authorization") || "";
+    const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+    return verifyAdminToken(token);
+  }
 
   revokeApiKeys = async (request: Request, response: Response) => {
     const email = typeof request.body?.email === "string" ? request.body.email : "";
