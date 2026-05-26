@@ -282,6 +282,9 @@ export class DeveloperController {
       body:not(.signed-in) .content > .page:not(#overview) { display: none !important; }
       body:not(.signed-in) .auth-required { opacity: .45; pointer-events: none; }
       body:not(.signed-in) .nav-item:not([data-nav="overview"]) { opacity: .46; }
+      .admin-only { display: none !important; }
+      body.admin-user .admin-only { display: flex !important; }
+      body.admin-user section.admin-only { display: block !important; }
       .workspace { padding-top: 16px; }
       .topbar { margin: 0 auto; max-width: 1120px; width: 100%; }
       .content { max-width: 1120px; }
@@ -344,7 +347,7 @@ export class DeveloperController {
           <a class="nav-item" data-nav="analytics" href="#analytics"><span class="nav-dot"></span> Analytics</a>
           <a class="nav-item" data-nav="logs" href="#logs"><span class="nav-dot"></span> Logs</a>
           <a class="nav-item" data-nav="playground" href="#playground"><span class="nav-dot"></span> Playground</a>
-          <a class="nav-item" data-nav="approvals" href="#approvals"><span class="nav-dot"></span> Approvals</a>
+          <a class="nav-item admin-only" data-nav="approvals" href="#approvals"><span class="nav-dot"></span> Approvals</a>
           <a class="nav-item" data-nav="webhooks" href="#webhooks"><span class="nav-dot"></span> Webhooks</a>
           <a class="nav-item" data-nav="billing" href="#billing"><span class="nav-dot"></span> Billing</a>
           <a class="nav-item" data-nav="team" href="#team"><span class="nav-dot"></span> Team</a>
@@ -391,7 +394,7 @@ export class DeveloperController {
           <a class="nav-item" data-nav="keys" href="#keys">Keys</a>
           <a class="nav-item" data-nav="analytics" href="#analytics">Analytics</a>
           <a class="nav-item" data-nav="playground" href="#playground">Playground</a>
-          <a class="nav-item" data-nav="approvals" href="#approvals">Approvals</a>
+          <a class="nav-item admin-only" data-nav="approvals" href="#approvals">Approvals</a>
           <a class="nav-item" data-nav="embed" href="#embed">Embed</a>
           <a class="nav-item" data-nav="docs" href="#docs">Docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke">Revoke</a>
@@ -627,7 +630,7 @@ export class DeveloperController {
         </div>
       </section>
 
-      <section id="approvals" class="page">
+      <section id="approvals" class="page admin-only">
         <div class="card">
           <div class="card-head">
             <div>
@@ -875,6 +878,7 @@ export class DeveloperController {
 
       function renderUsage(data) {
         currentUserIsAdmin = Boolean(data.isAdmin);
+        document.body.classList.toggle("admin-user", currentUserIsAdmin);
         const used = Number(data.emailUsageCount || 0);
         const quota = Number(data.monthlyQuota || 0);
         const remaining = Math.max(Number(data.remaining || 0), 0);
@@ -946,7 +950,7 @@ export class DeveloperController {
           return '<div class="approval-card ' + escapeHtml(status) + '">' +
             '<div class="key-card-top"><div><div class="key-prefix">' + escapeHtml(item.keyPrefix) + '</div><div class="fine">' + escapeHtml(item.name || "Cricket app") + ' · ' + escapeHtml(item.email) + '</div></div><span class="pill ' + (status === "approved" ? "active" : status === "rejected" ? "revoked" : "") + '">' + escapeHtml(status) + '</span></div>' +
             '<div class="docs-grid">' +
-              '<div class="endpoint"><code>Requested domains</code><p>' + escapeHtml((item.requestedDomains || []).join(", ") || "--") + '</p><p class="fine">' + (item.requestedDomains || []).map((domain) => '<a href="https://' + escapeHtml(domain) + '/cricket-live-verify.txt" target="_blank" rel="noreferrer">Check ' + escapeHtml(domain) + '</a>').join("<br>") + '</p></div>' +
+              '<div class="endpoint"><code>Requested domains</code><p>' + escapeHtml((item.requestedDomains || []).join(", ") || "--") + '</p><p class="fine">' + (item.requestedDomains || []).map((domain) => '<button class="secondary tiny" type="button" data-verify-domain="' + escapeHtml(domain) + '" data-verify-key="' + escapeHtml(item.keyPrefix) + '">Check ' + escapeHtml(domain) + '</button>').join(" ") + '</p></div>' +
               '<div class="endpoint"><code>Verification file</code><p>/' + 'cricket-live-verify.txt<br><strong>' + escapeHtml(item.verificationToken || "") + '</strong></p></div>' +
             '</div>' +
             '<div class="key-actions">' +
@@ -979,6 +983,7 @@ export class DeveloperController {
         currentUser = user || null;
         const signedIn = Boolean(user);
         document.body.classList.toggle("signed-in", signedIn);
+        document.body.classList.remove("admin-user");
         setFormsEnabled(signedIn);
         googleSignInBtn.hidden = signedIn;
         signOutBtn.hidden = !signedIn;
@@ -1045,6 +1050,11 @@ export class DeveloperController {
         if (!currentUser && id !== "overview") {
           location.hash = "overview";
           setStatus("Sign in with Google to unlock this section.", "bad");
+          return;
+        }
+        if (id === "approvals" && !currentUserIsAdmin) {
+          location.hash = "overview";
+          setStatus("Administrator access is required.", "bad");
           return;
         }
         setActiveNav(id);
@@ -1169,6 +1179,29 @@ export class DeveloperController {
       });
 
       approvalList.addEventListener("click", async (event) => {
+        const verifyButton = event.target.closest("[data-verify-domain]");
+        if (verifyButton) {
+          if (!currentUserIsAdmin) {
+            setStatus("Administrator access is required.", "bad");
+            return;
+          }
+          verifyButton.disabled = true;
+          setStatus("Checking verification file...");
+          try {
+            const firebaseIdToken = await currentUser.getIdToken();
+            const payload = await postJson("/api/developer/api-keys/approvals/verify", {
+              firebaseIdToken,
+              keyPrefix: verifyButton.getAttribute("data-verify-key") || "",
+              domain: verifyButton.getAttribute("data-verify-domain") || ""
+            });
+            setStatus(payload.data.ok ? "Verification matched. You can approve this request." : "Verification failed: " + (payload.data.received || "file missing"), payload.data.ok ? "ok" : "bad");
+          } catch (error) {
+            setStatus(error.message || "Could not check verification file", "bad");
+          } finally {
+            verifyButton.disabled = false;
+          }
+          return;
+        }
         const approveButton = event.target.closest("[data-approve-key]");
         const rejectButton = event.target.closest("[data-reject-key]");
         if (!approveButton && !rejectButton) return;
@@ -1691,6 +1724,25 @@ export class DeveloperController {
       response.json({ data: result, message: `API key ${result.approvalStatus}.` });
     } catch (error) {
       this.sendApiKeyError(response, error, "Approval review is unavailable");
+    }
+  };
+
+  verifyApprovalDomain = async (request: Request, response: Response) => {
+    const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
+    const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : "";
+    const domain = typeof request.body?.domain === "string" ? request.body.domain : "";
+
+    if (!firebaseIdToken.trim() || !keyPrefix.trim() || !domain.trim()) {
+      response.status(400).json({ error: "Google sign-in, key prefix and domain are required" });
+      return;
+    }
+
+    try {
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      const result = await this.apiKeyService.verifyApprovalDomain({ adminEmail: verifiedUser.email, keyPrefix, domain });
+      response.json({ data: result, message: result.ok ? "Verification file matched." : "Verification file did not match." });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Domain verification is unavailable");
     }
   };
 

@@ -412,6 +412,54 @@ export class ApiKeyService {
     };
   }
 
+  async verifyApprovalDomain(input: { adminEmail: string; keyPrefix: string; domain: string }) {
+    if (!isApiAdmin(input.adminEmail)) {
+      throw new ApiKeyServiceError("Administrator access is required", 403);
+    }
+
+    const key = await ApiKeyModel.findOne({ keyPrefix: input.keyPrefix, revoked: false }).lean();
+    if (!key) {
+      throw new ApiKeyServiceError("Approval request not found", 404);
+    }
+
+    const domain = normalizeAllowedOrigins(input.domain)[0];
+    if (!domain) {
+      throw new ApiKeyServiceError("Valid domain is required", 400);
+    }
+
+    const requestedDomains = key.requestedDomains?.length ? key.requestedDomains : key.allowedOrigins || [];
+    if (!requestedDomains.includes(domain)) {
+      throw new ApiKeyServiceError("Domain is not part of this approval request", 400);
+    }
+
+    const url = `https://${domain}/cricket-live-verify.txt`;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+      const body = (await response.text()).trim();
+      clearTimeout(timeout);
+
+      return {
+        domain,
+        url,
+        ok: response.ok && body === key.verificationToken,
+        status: response.status,
+        expected: key.verificationToken,
+        received: body.slice(0, 240)
+      };
+    } catch (error) {
+      return {
+        domain,
+        url,
+        ok: false,
+        status: 0,
+        expected: key.verificationToken,
+        received: error instanceof Error ? error.message : "Verification request failed"
+      };
+    }
+  }
+
   private async assertCreateAllowed(email: string) {
     if (env.API_KEY_CREATE_COOLDOWN_SECONDS > 0) {
       const lastKey = await ApiKeyModel.findOne({ email }).sort({ createdAt: -1 }).lean();
