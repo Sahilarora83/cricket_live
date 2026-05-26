@@ -150,6 +150,15 @@ export class DeveloperController {
       .key-card-top { align-items: start; display: flex; justify-content: space-between; gap: 12px; }
       .key-card-meta { color: #9ca3af; display: grid; gap: 4px; font-size: 12px; grid-template-columns: repeat(2, 1fr); }
       .key-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .workflow-steps { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0; }
+      .workflow-step { background: #141414; border: 1px solid #303030; border-radius: 12px; padding: 14px; }
+      .workflow-step strong { display: block; margin-bottom: 5px; }
+      .approval-card { background: #181818; border: 1px solid #303030; border-radius: 14px; display: grid; gap: 12px; padding: 16px; }
+      .approval-card.pending { border-color: #5a4a22; }
+      .approval-card.approved { border-color: #214638; }
+      .approval-card.rejected { border-color: #5b2b2b; }
+      .copy-row { display: grid; gap: 8px; grid-template-columns: 1fr auto; align-items: start; }
+      .copy-row textarea { min-height: 78px; }
       .progress { background: #0b1020; border-radius: 999px; height: 8px; overflow: hidden; }
       .progress div { background: linear-gradient(90deg, #22c55e, #3b82f6); height: 100%; width: 0%; }
       .empty-state { background: rgba(17,24,39,.7); border: 1px dashed rgba(255,255,255,.12); border-radius: 16px; color: #9ca3af; padding: 18px; }
@@ -308,9 +317,11 @@ export class DeveloperController {
         .crumbs { font-size: 13px; }
         .page#overview > .card:first-child { padding: 20px; }
         .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .workflow-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 520px) {
         .usage-grid { grid-template-columns: 1fr; }
+        .workflow-steps, .copy-row { grid-template-columns: 1fr; }
         .auth-actions { gap: 6px; }
         #signOutBtn, #googleSignInBtn { min-height: 40px; }
       }
@@ -332,6 +343,7 @@ export class DeveloperController {
           <a class="nav-item" data-nav="analytics" href="#analytics"><span class="nav-dot"></span> Analytics</a>
           <a class="nav-item" data-nav="logs" href="#logs"><span class="nav-dot"></span> Logs</a>
           <a class="nav-item" data-nav="playground" href="#playground"><span class="nav-dot"></span> Playground</a>
+          <a class="nav-item" data-nav="approvals" href="#approvals"><span class="nav-dot"></span> Approvals</a>
           <a class="nav-item" data-nav="webhooks" href="#webhooks"><span class="nav-dot"></span> Webhooks</a>
           <a class="nav-item" data-nav="billing" href="#billing"><span class="nav-dot"></span> Billing</a>
           <a class="nav-item" data-nav="team" href="#team"><span class="nav-dot"></span> Team</a>
@@ -378,6 +390,7 @@ export class DeveloperController {
           <a class="nav-item" data-nav="keys" href="#keys">Keys</a>
           <a class="nav-item" data-nav="analytics" href="#analytics">Analytics</a>
           <a class="nav-item" data-nav="playground" href="#playground">Playground</a>
+          <a class="nav-item" data-nav="approvals" href="#approvals">Approvals</a>
           <a class="nav-item" data-nav="embed" href="#embed">Embed</a>
           <a class="nav-item" data-nav="docs" href="#docs">Docs</a>
           <a class="nav-item" data-nav="revoke" href="#revoke">Revoke</a>
@@ -471,9 +484,9 @@ export class DeveloperController {
               <input name="email" type="email" placeholder="developer@example.com" required />
             </label>
             <label>
-              Allowed domains
-              <textarea name="allowedOrigins" placeholder="example.com&#10;localhost:5173" required></textarea>
-              <span class="fine">One domain per line. Browser widget/API calls will be accepted only from these domains.</span>
+              Website domains for approval
+              <textarea name="allowedOrigins" placeholder="example.com&#10;www.example.com" required></textarea>
+              <span class="fine">One domain per line. The key stays pending until an administrator approves these domains.</span>
             </label>
             <button id="generateKeyBtn" class="primary" type="submit">Generate API key</button>
           </form>
@@ -487,6 +500,12 @@ export class DeveloperController {
             <div class="result-title">Your API key</div>
             <textarea id="apiKey" readonly></textarea>
             <p id="quotaStatus" class="status">Copy it now. The full key is shown only once.</p>
+            <div class="result-title">Domain verification</div>
+            <div class="copy-row">
+              <textarea id="verificationBox" readonly></textarea>
+              <button id="copyVerificationBtn" type="button" class="secondary">Copy</button>
+            </div>
+            <p class="status">Upload this content at <code>/cricket-live-verify.txt</code> on your website, then wait for admin approval.</p>
             <div class="actions">
               <button id="copyBtn" type="button" class="secondary">Copy key</button>
               <button id="testBtn" type="button">Test key</button>
@@ -590,18 +609,37 @@ export class DeveloperController {
 
       <section id="playground" class="page">
         <div class="card">
-          <div class="card-head"><div><h2>API playground</h2><p class="muted">Select an endpoint, inspect headers, and copy generated code.</p></div><span class="badge">Interactive</span></div>
+          <div class="card-head"><div><h2>API playground</h2><p class="muted">Run real API requests with your approved key, inspect response headers, and copy code.</p></div><span class="badge">Interactive</span></div>
           <div class="split">
             <div>
-              <label>Endpoint<select><option>GET /api/v1/live-match</option><option>GET /api/v1/matches</option><option>GET /api/v1/score/:matchId</option></select></label>
-              <div class="panel"><button class="primary" type="button">Send request</button></div>
+              <label>API key<textarea id="playgroundKey" placeholder="Paste an approved cricket_live_ key"></textarea></label>
+              <label>Endpoint<select id="playgroundEndpoint"><option value="/api/v1/live-match">GET /api/v1/live-match</option><option value="/api/v1/matches">GET /api/v1/matches</option><option value="/api/v1/series/ipl-2026">GET /api/v1/series/ipl-2026</option><option value="/api/v1/score/:matchId">GET /api/v1/score/:matchId</option><option value="/api/v1/commentary/:matchId">GET /api/v1/commentary/:matchId</option></select></label>
+              <label id="matchIdField" hidden>Match ID<input id="playgroundMatchId" placeholder="Paste match id" /></label>
+              <div class="panel actions"><button id="sendPlaygroundBtn" class="primary" type="button">Send request</button><button id="copyPlaygroundCurlBtn" class="secondary" type="button">Copy cURL</button></div>
+              <p id="playgroundStatus" class="status">Approved keys can be tested here. Pending keys will return an approval warning.</p>
             </div>
-            <pre class="code-block">{
-  "data": {
-    "status": "live",
-    "source": "cricbuzz"
-  }
-}</pre>
+            <pre id="playgroundResponse" class="code-block">Select an endpoint and send a request.</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="approvals" class="page">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Domain approvals</h2>
+              <p class="muted">Administrator queue for AdSense-style domain verification. Keys cannot call the API until approved.</p>
+            </div>
+            <span class="badge">Admin</span>
+          </div>
+          <div class="workflow-steps">
+            <div class="workflow-step"><strong>1. Key</strong><span class="fine">User generates and copies API key.</span></div>
+            <div class="workflow-step"><strong>2. Domain</strong><span class="fine">User submits website domains.</span></div>
+            <div class="workflow-step"><strong>3. Verify</strong><span class="fine">User uploads verification file.</span></div>
+            <div class="workflow-step"><strong>4. Approve</strong><span class="fine">Admin approves or rejects access.</span></div>
+          </div>
+          <div id="approvalList" class="keys-table">
+            <div class="empty-state">Admin access required.</div>
           </div>
         </div>
       </section>
@@ -611,34 +649,49 @@ export class DeveloperController {
           <div class="card-head">
             <div>
               <h2>API docs</h2>
-              <p class="muted">Use <code>x-api-key</code> for direct API calls. Widget embed uses the same key.</p>
+              <p class="muted">Complete integration guide for approved Cricket Live developer keys.</p>
             </div>
             <span class="badge">v1</span>
           </div>
-          <div class="tab-row">
-            <button class="active" type="button">cURL</button>
-            <button type="button">JavaScript</button>
-            <button type="button">Python</button>
-            <button type="button">Node.js</button>
+          <div class="workflow-steps">
+            <div class="workflow-step"><strong>Generate</strong><span class="fine">Create a key and save the full key immediately.</span></div>
+            <div class="workflow-step"><strong>Verify</strong><span class="fine">Upload <code>cricket-live-verify.txt</code> to your site root.</span></div>
+            <div class="workflow-step"><strong>Approval</strong><span class="fine">Wait for administrator approval.</span></div>
+            <div class="workflow-step"><strong>Use</strong><span class="fine">Send <code>x-api-key</code> from the approved domain.</span></div>
           </div>
-          <pre class="code-block">curl -H "x-api-key: YOUR_API_KEY" \\
-  ${_request.protocol}://${_request.get("host")}/api/v1/live-match</pre>
+          <pre class="code-block">curl -H "x-api-key: YOUR_API_KEY" "${_request.protocol}://${_request.get("host")}/api/v1/live-match"</pre>
           <div class="docs-grid">
             <div class="endpoint">
               <code>GET /api/v1/matches</code>
-              <p>Live, upcoming, and recent IPL matches.</p>
+              <p>Returns live, upcoming, and recent matches. Use this to build match lists and schedules.</p>
             </div>
             <div class="endpoint">
               <code>GET /api/v1/live-match</code>
-              <p>Current live match with score summary.</p>
+              <p>Returns the current active live match, including team names, match id, venue, and embedded score summary when available.</p>
             </div>
             <div class="endpoint">
               <code>GET /api/v1/score/:matchId</code>
-              <p>Detailed score for one match.</p>
+              <p>Returns the latest detailed score for one match id. Use match ids from <code>/api/v1/matches</code> or <code>/api/v1/live-match</code>.</p>
             </div>
             <div class="endpoint">
-              <code>GET /api/system-status</code>
-              <p>Backend uptime and scraper health status.</p>
+              <code>GET /api/v1/commentary/:matchId</code>
+              <p>Returns recent commentary for one match when commentary is available from the provider.</p>
+            </div>
+            <div class="endpoint">
+              <code>GET /api/v1/series/ipl-2026</code>
+              <p>Returns IPL series data such as matches, squads, table data, and local assets.</p>
+            </div>
+            <div class="endpoint">
+              <code>Headers</code>
+              <p>Every protected response includes quota and rate-limit headers: <code>x-api-quota-limit</code>, <code>x-api-quota-used</code>, <code>x-api-quota-remaining</code>, and <code>x-api-key-rate-limit-remaining</code>.</p>
+            </div>
+            <div class="endpoint">
+              <code>403 approval errors</code>
+              <p><code>API key is waiting for administrator approval</code> means the domain request is pending. <code>This API key is not allowed from this domain</code> means the request came from an unapproved domain.</p>
+            </div>
+            <div class="endpoint">
+              <code>Widget embed</code>
+              <p>Use the Embed widget page after approval. The widget uses the same key and must run from an approved website domain.</p>
             </div>
           </div>
         </div>
@@ -730,6 +783,7 @@ export class DeveloperController {
       const revokeForm = document.getElementById("revokeForm");
       const result = document.getElementById("result");
       const apiKeyBox = document.getElementById("apiKey");
+      const verificationBox = document.getElementById("verificationBox");
       const exampleBox = document.getElementById("example");
       const embedTemplate = document.getElementById("embedTemplate");
       const testStatus = document.getElementById("testStatus");
@@ -756,11 +810,21 @@ export class DeveloperController {
       const themeToggle = document.getElementById("themeToggle");
       const crumbs = document.getElementById("crumbs");
       const requestLogs = document.getElementById("requestLogs");
+      const approvalList = document.getElementById("approvalList");
+      const playgroundKey = document.getElementById("playgroundKey");
+      const playgroundEndpoint = document.getElementById("playgroundEndpoint");
+      const playgroundMatchId = document.getElementById("playgroundMatchId");
+      const matchIdField = document.getElementById("matchIdField");
+      const sendPlaygroundBtn = document.getElementById("sendPlaygroundBtn");
+      const copyPlaygroundCurlBtn = document.getElementById("copyPlaygroundCurlBtn");
+      const playgroundStatus = document.getElementById("playgroundStatus");
+      const playgroundResponse = document.getElementById("playgroundResponse");
       const gatedControls = Array.from(document.querySelectorAll("#keyForm input, #keyForm textarea, #keyForm button, #revokeForm input, #revokeForm button"));
       const createEmailInput = form.elements.email;
       const revokeEmailInput = revokeForm.elements.email;
       let currentKey = "";
       let currentUser = null;
+      let currentUserIsAdmin = false;
       let usageTimer = 0;
 
       embedTemplate.value = '<div id="cricket-live-widget">Loading live cricket scores...</div>\\n' +
@@ -802,6 +866,7 @@ export class DeveloperController {
       }
 
       function renderUsage(data) {
+        currentUserIsAdmin = Boolean(data.isAdmin);
         const used = Number(data.emailUsageCount || 0);
         const quota = Number(data.monthlyQuota || 0);
         const remaining = Math.max(Number(data.remaining || 0), 0);
@@ -817,14 +882,17 @@ export class DeveloperController {
         const rows = Array.isArray(data.keys) ? data.keys : [];
         keysTable.innerHTML = rows.length ? rows.map((key) => {
             const statusClass = key.revoked ? "revoked" : "active";
-            const statusText = key.revoked ? "Revoked" : "Active";
+            const approval = key.approvalStatus || "pending";
+            const statusText = key.revoked ? "Revoked" : approval.charAt(0).toUpperCase() + approval.slice(1);
             const percent = key.monthlyQuota > 0 ? Math.min((Number(key.usageCount || 0) / Number(key.monthlyQuota || 1)) * 100, 100).toFixed(1) : "0";
             const action = key.revoked ? '<span class="fine">Archived</span>' : '<button class="secondary tiny" type="button" data-copy-prefix="' + escapeHtml(key.keyPrefix) + '">Copy</button><button class="danger tiny" type="button" data-delete-key="' + escapeHtml(key.keyPrefix) + '">Revoke</button>';
             return '<div class="key-card" data-key-card data-search="' + escapeHtml((key.name || "") + " " + (key.keyPrefix || "")) + '">' +
               '<div class="key-card-top">' +
-                '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div><div class="fine">Domains: ' + escapeHtml((key.allowedOrigins || []).join(", ") || "unrestricted legacy key") + '</div></div>' +
-                '<span class="pill ' + statusClass + '">' + statusText + '</span>' +
+                '<div><div class="key-prefix">' + escapeHtml(key.keyPrefix) + '</div><div class="fine">' + escapeHtml(key.name || "Cricket app") + '</div><div class="fine">Requested: ' + escapeHtml((key.requestedDomains || []).join(", ") || "--") + '</div><div class="fine">Approved: ' + escapeHtml((key.approvedDomains || []).join(", ") || "--") + '</div></div>' +
+                '<span class="pill ' + (approval === "approved" ? "active" : approval === "rejected" ? "revoked" : "") + '">' + statusText + '</span>' +
               '</div>' +
+              (approval === "pending" ? '<div class="status">Upload <code>/cricket-live-verify.txt</code> with:<br><code>' + escapeHtml(key.verificationToken || "") + '</code><br>Admin approval is required before this key can call the API.</div>' : '') +
+              (approval === "rejected" ? '<div class="status bad">' + escapeHtml(key.rejectionReason || "Rejected by administrator") + '</div>' : '') +
               '<div><div class="fine">Usage ' + formatNumber(key.usageCount) + ' / ' + formatNumber(key.monthlyQuota) + '</div><div class="progress"><div style="width:' + percent + '%"></div></div></div>' +
               '<div class="key-card-meta">' +
                 '<div>Created<br><strong>' + escapeHtml(formatDate(key.createdAt)) + '</strong></div>' +
@@ -843,6 +911,42 @@ export class DeveloperController {
             '<div class="fine">' + escapeHtml(log.status + " " + (log.message || "")) + ' · ' + escapeHtml(log.origin || "no origin") + ' · ' + escapeHtml(formatDate(log.createdAt)) + '</div></div>' +
           '</div>';
         }).join("") : '<div class="empty-state">No API key traffic yet. Test a key from the playground or widget.</div>';
+        if (currentUserIsAdmin) {
+          void fetchApprovals().catch((error) => {
+            approvalList.innerHTML = '<div class="empty-state">' + escapeHtml(error.message || "Could not load approvals") + '</div>';
+          });
+        } else {
+          approvalList.innerHTML = '<div class="empty-state">Administrator access required. Add your email to <code>API_ADMIN_EMAILS</code>.</div>';
+        }
+      }
+
+      async function fetchApprovals() {
+        if (!currentUser || !currentUserIsAdmin) return;
+        const firebaseIdToken = await currentUser.getIdToken();
+        const response = await fetch("/api/developer/api-keys/approvals", {
+          headers: { Authorization: "Bearer " + firebaseIdToken },
+          cache: "no-store"
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Could not load approvals");
+        renderApprovals(payload.data.requests || []);
+      }
+
+      function renderApprovals(requests) {
+        approvalList.innerHTML = requests.length ? requests.map((item) => {
+          const status = item.approvalStatus || "pending";
+          return '<div class="approval-card ' + escapeHtml(status) + '">' +
+            '<div class="key-card-top"><div><div class="key-prefix">' + escapeHtml(item.keyPrefix) + '</div><div class="fine">' + escapeHtml(item.name || "Cricket app") + ' · ' + escapeHtml(item.email) + '</div></div><span class="pill ' + (status === "approved" ? "active" : status === "rejected" ? "revoked" : "") + '">' + escapeHtml(status) + '</span></div>' +
+            '<div class="docs-grid">' +
+              '<div class="endpoint"><code>Requested domains</code><p>' + escapeHtml((item.requestedDomains || []).join(", ") || "--") + '</p><p class="fine">' + (item.requestedDomains || []).map((domain) => '<a href="https://' + escapeHtml(domain) + '/cricket-live-verify.txt" target="_blank" rel="noreferrer">Check ' + escapeHtml(domain) + '</a>').join("<br>") + '</p></div>' +
+              '<div class="endpoint"><code>Verification file</code><p>/' + 'cricket-live-verify.txt<br><strong>' + escapeHtml(item.verificationToken || "") + '</strong></p></div>' +
+            '</div>' +
+            '<div class="key-actions">' +
+              '<button class="primary tiny" type="button" data-approve-key="' + escapeHtml(item.keyPrefix) + '">Approve</button>' +
+              '<button class="danger tiny" type="button" data-reject-key="' + escapeHtml(item.keyPrefix) + '">Reject</button>' +
+            '</div>' +
+          '</div>';
+        }).join("") : '<div class="empty-state">No approval requests yet.</div>';
       }
 
       function resetUsage() {
@@ -857,6 +961,8 @@ export class DeveloperController {
         usageUpdatedAt.textContent = "Waiting";
         keysTable.innerHTML = '<div class="empty-state">Sign in to load API keys.</div>';
         requestLogs.innerHTML = '<div class="empty-state">Sign in to load request logs.</div>';
+        approvalList.innerHTML = '<div class="empty-state">Admin access required.</div>';
+        currentUserIsAdmin = false;
       }
 
       function syncSignedInUser(user) {
@@ -915,14 +1021,14 @@ export class DeveloperController {
 
       function currentSectionFromHash() {
         const id = (location.hash || "#overview").replace("#", "");
-        return ["overview", "keys", "analytics", "logs", "playground", "webhooks", "billing", "team", "embed", "docs", "revoke", "settings"].includes(id) ? id : "overview";
+        return ["overview", "keys", "analytics", "logs", "playground", "approvals", "webhooks", "billing", "team", "embed", "docs", "revoke", "settings"].includes(id) ? id : "overview";
       }
 
       function setActiveNav(id) {
         document.querySelectorAll("[data-nav]").forEach((link) => {
           link.classList.toggle("active", link.getAttribute("data-nav") === id);
         });
-        const labels = { overview: "Overview", keys: "API Keys", analytics: "Analytics", logs: "Logs", playground: "Playground", webhooks: "Webhooks", billing: "Billing", team: "Team", embed: "Embed Widget", docs: "Documentation", revoke: "Revoke Key", settings: "Settings" };
+        const labels = { overview: "Overview", keys: "API Keys", analytics: "Analytics", logs: "Logs", playground: "Playground", approvals: "Approvals", webhooks: "Webhooks", billing: "Billing", team: "Team", embed: "Embed Widget", docs: "Documentation", revoke: "Revoke Key", settings: "Settings" };
         crumbs.textContent = "Developer Console / " + (labels[id] || "Overview");
       }
 
@@ -1048,6 +1154,24 @@ export class DeveloperController {
         }
       });
 
+      approvalList.addEventListener("click", async (event) => {
+        const approveButton = event.target.closest("[data-approve-key]");
+        const rejectButton = event.target.closest("[data-reject-key]");
+        if (!approveButton && !rejectButton) return;
+        if (!currentUserIsAdmin) {
+          setStatus("Administrator access is required.", "bad");
+          return;
+        }
+        const keyPrefix = (approveButton || rejectButton).getAttribute(approveButton ? "data-approve-key" : "data-reject-key") || "";
+        const action = approveButton ? "approve" : "reject";
+        const reason = action === "reject" ? window.prompt("Reason for rejection?", "Domain verification missing or invalid") || "" : "";
+        const firebaseIdToken = await currentUser.getIdToken();
+        const payload = await postJson("/api/developer/api-keys/approvals/review", { firebaseIdToken, keyPrefix, action, reason });
+        setStatus("Approval updated: " + payload.data.approvalStatus, "ok");
+        await fetchApprovals();
+        await fetchUsage();
+      });
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!currentUser) {
@@ -1070,10 +1194,12 @@ export class DeveloperController {
           });
 
           currentKey = payload.data.key;
+          playgroundKey.value = currentKey;
           apiKeyBox.value = currentKey;
+          verificationBox.value = payload.data.verificationToken || "";
           exampleBox.value = '<div id="cricket-live-widget">Loading live cricket scores...</div>\\n<script async src="' + location.origin + '/api/developer/widget.js" data-api-key="' + currentKey + '" data-target="cricket-live-widget" data-refresh="30000"><\\/script>';
           quotaStatus.className = "status ok";
-          quotaStatus.textContent = "Copy it now. Limit: " + payload.data.monthlyQuota + " requests/month for this email.";
+          quotaStatus.textContent = "Copy it now. Status: pending admin approval. Limit: " + payload.data.monthlyQuota + " requests/month for this email.";
           result.classList.add("visible");
           setStatus("API key created successfully.", "ok");
           void fetchUsage().catch(() => {});
@@ -1113,6 +1239,11 @@ export class DeveloperController {
 
       document.getElementById("copyBtn").addEventListener("click", async () => {
         await navigator.clipboard.writeText(currentKey);
+      });
+
+      document.getElementById("copyVerificationBtn").addEventListener("click", async () => {
+        await navigator.clipboard.writeText(verificationBox.value);
+        setStatus("Verification token copied.", "ok");
       });
 
       document.getElementById("testBtn").addEventListener("click", async () => {
@@ -1202,6 +1333,62 @@ export class DeveloperController {
         team: item[1],
         score: item[2].replace(/\\s+/g, ""),
         overs: normalizeOvers(item[3])
+      });
+
+      function playgroundUrl() {
+        let path = playgroundEndpoint.value;
+        if (path.includes(":matchId")) {
+          path = path.replace(":matchId", encodeURIComponent(playgroundMatchId.value.trim()));
+        }
+        return path;
+      }
+
+      playgroundEndpoint.addEventListener("change", () => {
+        matchIdField.hidden = !playgroundEndpoint.value.includes(":matchId");
+      });
+
+      copyPlaygroundCurlBtn.addEventListener("click", async () => {
+        const key = playgroundKey.value.trim() || "YOUR_API_KEY";
+        await navigator.clipboard.writeText('curl -H "x-api-key: ' + key + '" "' + location.origin + playgroundUrl() + '"');
+        playgroundStatus.className = "status ok";
+        playgroundStatus.textContent = "cURL copied.";
+      });
+
+      sendPlaygroundBtn.addEventListener("click", async () => {
+        const key = playgroundKey.value.trim();
+        if (!key) {
+          playgroundStatus.className = "status bad";
+          playgroundStatus.textContent = "Paste an approved API key first.";
+          return;
+        }
+        if (playgroundEndpoint.value.includes(":matchId") && !playgroundMatchId.value.trim()) {
+          playgroundStatus.className = "status bad";
+          playgroundStatus.textContent = "Match ID is required for this endpoint.";
+          return;
+        }
+        sendPlaygroundBtn.disabled = true;
+        playgroundStatus.className = "status";
+        playgroundStatus.textContent = "Sending request...";
+        try {
+          const response = await fetch(playgroundUrl(), { headers: { "x-api-key": key }, cache: "no-store" });
+          const payload = await response.json();
+          const headers = {
+            "x-api-plan": response.headers.get("x-api-plan"),
+            "x-api-quota-limit": response.headers.get("x-api-quota-limit"),
+            "x-api-quota-used": response.headers.get("x-api-quota-used"),
+            "x-api-quota-remaining": response.headers.get("x-api-quota-remaining")
+          };
+          playgroundResponse.textContent = JSON.stringify({ status: response.status, ok: response.ok, headers, body: payload }, null, 2);
+          playgroundStatus.className = "status " + (response.ok ? "ok" : "bad");
+          playgroundStatus.textContent = response.ok ? "Request completed." : (payload.error || "Request failed");
+          void fetchUsage().catch(() => {});
+        } catch (error) {
+          playgroundStatus.className = "status bad";
+          playgroundStatus.textContent = error.message || "Request failed";
+          playgroundResponse.textContent = String(error.message || error);
+        } finally {
+          sendPlaygroundBtn.disabled = false;
+        }
       });
     });
     const t1 = rows.get(shortName(match.team1));
@@ -1405,6 +1592,24 @@ export class DeveloperController {
     }
   };
 
+  getApprovalRequests = async (request: Request, response: Response) => {
+    const authorization = request.header("authorization") || "";
+    const firebaseIdToken = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+
+    if (!firebaseIdToken) {
+      response.status(401).json({ error: "Google sign-in is required" });
+      return;
+    }
+
+    try {
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      const result = await this.apiKeyService.listApprovalRequests(verifiedUser.email);
+      response.json({ data: result });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Approval requests are unavailable");
+    }
+  };
+
   createApiKey = async (request: Request, response: Response) => {
     const name = typeof request.body?.name === "string" ? request.body.name : "";
     const email = typeof request.body?.email === "string" ? request.body.email : "";
@@ -1432,6 +1637,26 @@ export class DeveloperController {
       data: result,
       message: "Copy this API key now. It will not be shown again."
     });
+  };
+
+  reviewApprovalRequest = async (request: Request, response: Response) => {
+    const firebaseIdToken = typeof request.body?.firebaseIdToken === "string" ? request.body.firebaseIdToken : "";
+    const keyPrefix = typeof request.body?.keyPrefix === "string" ? request.body.keyPrefix : "";
+    const action = request.body?.action === "reject" ? "reject" : "approve";
+    const reason = typeof request.body?.reason === "string" ? request.body.reason : undefined;
+
+    if (!firebaseIdToken.trim() || !keyPrefix.trim()) {
+      response.status(400).json({ error: "Google sign-in and key prefix are required" });
+      return;
+    }
+
+    try {
+      const verifiedUser = await verifyFirebaseIdToken(firebaseIdToken);
+      const result = await this.apiKeyService.reviewApproval({ adminEmail: verifiedUser.email, keyPrefix, action, reason });
+      response.json({ data: result, message: `API key ${result.approvalStatus}.` });
+    } catch (error) {
+      this.sendApiKeyError(response, error, "Approval review is unavailable");
+    }
   };
 
   revokeApiKeys = async (request: Request, response: Response) => {

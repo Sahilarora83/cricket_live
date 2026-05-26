@@ -44,6 +44,7 @@ const schema = z.object({
   API_KEY_OTP_TTL_MINUTES: z.coerce.number().int().min(1).default(10),
   API_KEY_OTP_RESEND_SECONDS: z.coerce.number().int().min(10).default(60),
   API_KEY_OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(5),
+  API_ADMIN_EMAILS: z.string().default(""),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),

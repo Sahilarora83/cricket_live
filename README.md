@@ -126,6 +126,7 @@ API_KEY_REVOKE_COOLDOWN_SECONDS=300
 API_KEY_OTP_TTL_MINUTES=10
 API_KEY_OTP_RESEND_SECONDS=60
 API_KEY_OTP_MAX_ATTEMPTS=5
+API_ADMIN_EMAILS=admin@example.com
 
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -192,6 +193,18 @@ Developer requests must include:
 ```text
 x-api-key: cricket_live_your_key_here
 ```
+
+API keys use an approval workflow:
+
+```text
+1. Developer signs in with Google.
+2. Developer generates a key and submits website domains.
+3. Developer uploads /cricket-live-verify.txt to the website root.
+4. Admin reviews the request from the Approvals console.
+5. The key works only after admin approval.
+```
+
+Set `API_ADMIN_EMAILS` to a comma-separated list of Google accounts that can approve or reject domain requests.
 
 API keys include:
 

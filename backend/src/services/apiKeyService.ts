@@ -2,6 +2,7 @@ import { ApiKeyModel } from "../models/ApiKey.js";
 import { ApiRequestLogModel } from "../models/ApiRequestLog.js";
 import { ApiKeyOtpModel } from "../models/ApiKeyOtp.js";
 import { env } from "../config/env.js";
+import crypto from "node:crypto";
 import { canPersist } from "../utils/persistence.js";
 import { currentUsageMonth, generateApiKey, generateOtpCode, hashApiKey, hashOtp } from "../utils/apiKeys.js";
 import { canSendEmail, sendOtpEmail } from "./emailService.js";
@@ -47,6 +48,14 @@ function originAllowed(requestOrigin: string, allowedOrigins: string[], trustedI
     const allowed = allowedOrigin.toLowerCase();
     return host === allowed || host.endsWith(`.${allowed}`);
   });
+}
+
+function adminEmails() {
+  return env.API_ADMIN_EMAILS.split(/[,\s]+/).map((email) => email.trim().toLowerCase()).filter(Boolean);
+}
+
+export function isApiAdmin(email: string) {
+  return adminEmails().includes(normalizeEmail(email));
 }
 
 export class ApiKeyService {
@@ -114,12 +123,17 @@ export class ApiKeyService {
     await this.assertCreateAllowed(email);
 
     const { key, keyPrefix } = generateApiKey();
+    const verificationToken = `cricket-live-site-verification=${crypto.randomBytes(18).toString("hex")}`;
     const record = await ApiKeyModel.create({
       name,
       email,
       keyPrefix,
       keyHash: hashApiKey(key),
       allowedOrigins,
+      requestedDomains: allowedOrigins,
+      approvedDomains: [],
+      approvalStatus: "pending",
+      verificationToken,
       plan: "open-source",
       monthlyQuota: env.API_FREE_MONTHLY_QUOTA,
       usageMonth: currentUsageMonth(),
@@ -129,7 +143,11 @@ export class ApiKeyService {
     return {
       key,
       keyPrefix: record.keyPrefix,
-      allowedOrigins: record.allowedOrigins,
+      requestedDomains: record.requestedDomains,
+      approvedDomains: record.approvedDomains,
+      approvalStatus: record.approvalStatus,
+      verificationToken: record.verificationToken,
+      verificationFile: "/cricket-live-verify.txt",
       plan: record.plan,
       monthlyQuota: record.monthlyQuota,
       maxActiveKeysPerEmail: env.API_MAX_ACTIVE_KEYS_PER_EMAIL,
@@ -185,6 +203,7 @@ export class ApiKeyService {
 
     return {
       email,
+      isAdmin: isApiAdmin(email),
       usageMonth,
       monthlyQuota,
       emailUsageCount,
@@ -204,7 +223,15 @@ export class ApiKeyService {
         name: key.name,
         email: key.email,
         keyPrefix: key.keyPrefix,
+        requestedDomains: key.requestedDomains || key.allowedOrigins || [],
+        approvedDomains: key.approvedDomains || [],
         allowedOrigins: key.allowedOrigins || [],
+        approvalStatus: key.approvalStatus || "pending",
+        verificationToken: key.verificationToken || "",
+        verificationFile: "/cricket-live-verify.txt",
+        reviewedAt: key.reviewedAt,
+        reviewedBy: key.reviewedBy,
+        rejectionReason: key.rejectionReason,
         plan: key.plan,
         monthlyQuota: key.monthlyQuota,
         usageMonth: key.usageMonth,
@@ -238,7 +265,21 @@ export class ApiKeyService {
       return { ok: false as const, status: 401, error: "Invalid API key" };
     }
 
-    if (!originAllowed(requestMeta?.origin || "", apiKey.allowedOrigins || [], requestMeta?.trustedInternalOrigin)) {
+    if ((apiKey.approvalStatus || "pending") !== "approved") {
+      await this.logApiRequest({
+        email: apiKey.email,
+        keyPrefix: apiKey.keyPrefix,
+        method: requestMeta?.method || "GET",
+        path: requestMeta?.path || "",
+        origin: requestMeta?.origin,
+        status: 403,
+        message: `Key ${apiKey.approvalStatus || "pending"}`
+      });
+      return { ok: false as const, status: 403, error: "API key is waiting for administrator approval" };
+    }
+
+    const approvedDomains = apiKey.approvedDomains?.length ? apiKey.approvedDomains : apiKey.allowedOrigins || [];
+    if (!originAllowed(requestMeta?.origin || "", approvedDomains, requestMeta?.trustedInternalOrigin)) {
       await this.logApiRequest({
         email: apiKey.email,
         keyPrefix: apiKey.keyPrefix,
@@ -312,6 +353,63 @@ export class ApiKeyService {
     } catch {
       // Request logging must never break API access.
     }
+  }
+
+  async listApprovalRequests(adminEmail: string) {
+    if (!isApiAdmin(adminEmail)) {
+      throw new ApiKeyServiceError("Administrator access is required", 403);
+    }
+    const keys = await ApiKeyModel.find({ revoked: false })
+      .sort({ approvalStatus: 1, createdAt: -1 })
+      .limit(100)
+      .lean();
+    return {
+      isAdmin: true,
+      requests: keys.map((key) => ({
+        name: key.name,
+        email: key.email,
+        keyPrefix: key.keyPrefix,
+        requestedDomains: key.requestedDomains || key.allowedOrigins || [],
+        approvedDomains: key.approvedDomains || [],
+        approvalStatus: key.approvalStatus || "pending",
+        verificationToken: key.verificationToken || "",
+        verificationFile: "/cricket-live-verify.txt",
+        createdAt: key.createdAt,
+        reviewedAt: key.reviewedAt,
+        reviewedBy: key.reviewedBy,
+        rejectionReason: key.rejectionReason
+      }))
+    };
+  }
+
+  async reviewApproval(input: { adminEmail: string; keyPrefix: string; action: "approve" | "reject"; reason?: string }) {
+    if (!isApiAdmin(input.adminEmail)) {
+      throw new ApiKeyServiceError("Administrator access is required", 403);
+    }
+    const key = await ApiKeyModel.findOne({ keyPrefix: input.keyPrefix, revoked: false });
+    if (!key) {
+      throw new ApiKeyServiceError("Approval request not found", 404);
+    }
+    if (input.action === "approve") {
+      const domains = key.requestedDomains?.length ? key.requestedDomains : key.allowedOrigins || [];
+      key.approvalStatus = "approved";
+      key.approvedDomains = domains;
+      key.allowedOrigins = domains;
+      key.rejectionReason = undefined;
+    } else {
+      key.approvalStatus = "rejected";
+      key.approvedDomains = [];
+      key.rejectionReason = input.reason?.trim() || "Rejected by administrator";
+    }
+    key.reviewedAt = new Date();
+    key.reviewedBy = normalizeEmail(input.adminEmail);
+    await key.save();
+    return {
+      keyPrefix: key.keyPrefix,
+      approvalStatus: key.approvalStatus,
+      approvedDomains: key.approvedDomains,
+      rejectionReason: key.rejectionReason
+    };
   }
 
   private async assertCreateAllowed(email: string) {
