@@ -242,15 +242,29 @@ export class DeveloperController {
         localStorage.removeItem("cricketAdminToken");
         location.reload();
       });
-      if (token) {
-        load().then(() => { timer = setInterval(() => load().catch(() => {}), 10000); }).catch(() => localStorage.removeItem("cricketAdminToken"));
-      } else {
+      function tryQueryLogin() {
         const params = new URLSearchParams(location.search);
         const email = params.get("email") || "";
         const password = params.get("password") || "";
         if (email && password) {
           void loginWithCredentials(email, password);
+          return true;
         }
+        return false;
+      }
+
+      if (token) {
+        load()
+          .then(() => { timer = setInterval(() => load().catch(() => {}), 10000); })
+          .catch(() => {
+            localStorage.removeItem("cricketAdminToken");
+            token = "";
+            if (!tryQueryLogin()) {
+              setLogin("Admin session expired. Please sign in again.", "bad");
+            }
+          });
+      } else {
+        tryQueryLogin();
       }
     </script>
   </body>
